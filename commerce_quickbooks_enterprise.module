@@ -1,0 +1,80 @@
+<?php
+
+/**
+ * @file
+ * Contains commerce_quickbooks_enterprise.module..
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\commerce_quickbooks_enterprise\Event\UserEvent;
+use Drupal\commerce_quickbooks_enterprise\Event\UserEvents;
+
+/**
+ * Implements hook_help().
+ */
+function commerce_quickbooks_enterprise_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the commerce_quickbooks_enterprise module.
+    case 'help.page.commerce_quickbooks_enterprise':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Drupal to Quickbooks Enterprise editions via SOAP service') . '</p>';
+      return $output;
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_create().
+ *
+ * Dispatches a commerce_quickbooks_enterprise.user.create event.
+ *
+ * We trigger an event instead of manually throwing the user into the Queue to
+ * follow the rest of the event subscription architecture that this module
+ * relies on.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function commerce_quickbooks_enterprise_user_create(\Drupal\Core\Entity\EntityInterface $entity) {
+  commerce_quickbooks_enterprise_dispatch_user_event($entity, "USER_CREATE");
+}
+
+/**
+ * Implement hook_ENTITY_TYPE_insert().
+ *
+ * Dispatches a commerce_quickbooks_enterprise.user.insert event.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function commerce_quickbooks_enterprise_user_insert(Drupal\Core\Entity\EntityInterface $entity) {
+  commerce_quickbooks_enterprise_dispatch_user_event($entity, "USER_INSERT");
+}
+
+/**
+ * Implement hook_ENTITY_TYPE_update().
+ *
+ * Dispatches a commerce_quickbooks_enterprise.user.update event.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function commerce_quickbooks_enterprise_user_update(Drupal\Core\Entity\EntityInterface $entity) {
+  commerce_quickbooks_enterprise_dispatch_user_event($entity, "USER_UPDATE");
+}
+
+/**
+ * Dispatches a User Event.
+ *
+ * Acts as a helper function for various hook_ENTITY_TYPE_* functions so that
+ * they don't all need to instantiate a dispatcher and dispatch an event.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   A user entity.
+ * @param $trigger
+ *   The event type to trigger.
+ */
+function commerce_quickbooks_enterprise_dispatch_user_event(Drupal\Core\Entity\EntityInterface $entity, $trigger) {
+  $dispatcher = \Drupal::service('event_dispatcher');
+
+  $event = new UserEvent($entity);
+
+  $dispatcher->dispatch(constant("UserEvents::$trigger"), $event);
+}
