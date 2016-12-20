@@ -1,0 +1,7 @@
+services:
+  commerce_quickbooks_enterprise:
+    class: '\Drupal\commerce_quickbooks_enterprise\QuickbooksEventSubscriber'
+    tags:
+      - {name: 'event_subscriber'}
+  commerce_quickbooks_enterprise.soap_service:
+    class: 'Drupal\commerce_quickbooks_enterprise\Soap\SoapService'
