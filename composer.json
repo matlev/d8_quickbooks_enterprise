@@ -1,14 +1,14 @@
 {
-  "name": "drupal/commerce_quickbooks_enterprise",
+  "name": "acro-matlev-quickbooks/commerce_quickbooks_enterprise",
   "type": "drupal-module",
   "description": "Drupal to Quickbooks Enterprise editions via SOAP service",
   "keywords": ["Drupal"],
   "license": "GPL-2.0+",
-  "homepage": "https://www.drupal.org/project/commerce_quickbooks_enterprise",
+  "homepage": "https://git.acromedia.com/mlevasseur/commerce_quickbooks_enterprise",
   "minimum-stability": "dev",
   "support": {
-    "issues": "https://www.drupal.org/project/issues/commerce_quickbooks_enterprise",
-    "source": "http://cgit.drupalcode.org/commerce_quickbooks_enterprise"
+    "issues": "https://git.acromedia.com/mlevasseur/commerce_quickbooks_enterprise/issues",
+    "source": "https://git.acromedia.com/mlevasseur/commerce_quickbooks_enterprise/tree/master"
   },
   "require": { }
 }
