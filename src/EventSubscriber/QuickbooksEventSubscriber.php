@@ -27,9 +27,6 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   public static function getSubscribedEvents() {
-    //
-    // @TODO: support PURCHASABLE ENTITIES
-    // @TODO: PRODUCTS should be checked for a SKU
     $events = [
       'commerce_order.place.post_transition' => 'onOrderTransition',
       ProductEvents::PRODUCT_CREATE => 'onProductAlter',
@@ -53,10 +50,9 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     /** @var \Drupal\Core\Config\ImmutableConfig Qb Enterprise $config */
     $config = \Drupal::config('commerce_quickbooks_enterprise.QuickbooksAdmin');
 
-    // @TODO: Check config before continuing.
-
     /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
     $order = $event->getEntity();
+
 
   }
 
@@ -69,11 +65,6 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
    * @param \Drupal\commerce_product\Event\ProductEvent $event
    */
   public function onProductAlter(ProductEvent $event) {
-    /** @var \Drupal\Core\Config\ImmutableConfig Qb Enterprise $config */
-    $config = \Drupal::config('commerce_quickbooks_enterprise.QuickbooksAdmin');
-
-    // @TODO: Check config before continuing.
-
     /** @var \Drupal\commerce_product\Entity\ProductInterface $product */
     $product = $event->getProduct();
 
@@ -86,11 +77,6 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
    * @param \Drupal\commerce_product\Event\ProductVariationEvent $event
    */
   public function onVariationAlter(ProductVariationEvent $event) {
-    /** @var \Drupal\Core\Config\ImmutableConfig Qb Enterprise $config */
-    $config = \Drupal::config('commerce_quickbooks_enterprise.QuickbooksAdmin');
-
-    // @TODO: Check config before continuing.
-
     /** @var \Drupal\commerce_product\Entity\ProductVariationInterface $variation */
     $variation = $event->getProductVariation();
 
@@ -107,11 +93,6 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
    * @param \Drupal\commerce_quickbooks_enterprise\Event\UserEvent $event
    */
   public function onUserEvent(UserEvent $event) {
-    /** @var \Drupal\Core\Config\ImmutableConfig Qb Enterprise $config */
-    $config = \Drupal::config('commerce_quickbooks_enterprise.QuickbooksAdmin');
-
-    // @TODO: Check config before continuing.
-
     /** @var \Drupal\Core\Entity\EntityInterface $user */
     $user = $event->getUser();
 

@@ -20,6 +20,8 @@ function commerce_quickbooks_enterprise_help($route_name, RouteMatchInterface $r
       $output .= '<h3>' . t('About') . '</h3>';
       $output .= '<p>' . t('Drupal to Quickbooks Enterprise editions via SOAP service') . '</p>';
       return $output;
+
+    default:
   }
 }
 
