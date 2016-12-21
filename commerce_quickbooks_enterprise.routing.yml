@@ -9,3 +9,10 @@ commerce_quickbooks_enterprise.quickbooks_admin_form:
   options:
     _admin_route: TRUE
 
+commerce_quickbooks_enterprise.quickbooks_soap_controller:
+  path: '/qb_soap'
+  defaults:
+    _controller: '\Drupal\commerce_quickbooks_enterprise\SoapBundle\SoapServiceController::handleRequest'
+  requirements:
+    _permission: 'access administration pages'
+
