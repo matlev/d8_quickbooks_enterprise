@@ -2,7 +2,64 @@
 
 namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
 
-class SoapService {
+/**
+ * Handle SOAP requests and return a response.
+ *
+ * @TODO: Implement logging for each request.
+ *
+ * Class SoapService
+ * @package Drupal\commerce_quickbooks_enterprise\SoapBundle\Services
+ */
+class SoapService implements SoapServiceInterface {
 
+  private $serverVersion = '1';
 
+  /**
+   * {@inheritDoc}
+   */
+  public function serverVersion(\stdClass $request) {
+    // TODO: Implement serverVersion() method.
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public function clientVersion(\stdClass $request) {
+    // TODO: Implement clientVersion() method.
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public function authenticate(\stdClass $request) {
+    // TODO: Implement authenticate() method.
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public function sendRequestXML(\stdClass $request) {
+    // TODO: Implement sendRequestXML() method.
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public function receiveResponseXML(\stdClass $request) {
+    // TODO: Implement receiveResponseXML() method.
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public function getLastError(\stdClass $request) {
+    // TODO: Implement getLastError() method.
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public function closeConnection(\stdClass $request) {
+    // TODO: Implement closeConnection() method.
+  }
 }
