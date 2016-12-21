@@ -4,4 +4,4 @@ services:
     tags:
       - {name: 'event_subscriber'}
   commerce_quickbooks_enterprise.soap_service:
-    class: 'Drupal\commerce_quickbooks_enterprise\Soap\SoapService'
+    class: '\Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapService'
