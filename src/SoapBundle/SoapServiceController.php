@@ -77,6 +77,8 @@ class SoapServiceController extends ControllerBase {
     ob_start();
     $this->server->handle();
     $response->setContent(ob_get_clean());
+
+    return $response;
   }
 
 }
