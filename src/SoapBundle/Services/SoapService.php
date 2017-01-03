@@ -12,13 +12,16 @@ namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
  */
 class SoapService implements SoapServiceInterface {
 
-  private $serverVersion = '1';
+  private $serverVersion = '1.0';
 
   /**
    * {@inheritDoc}
    */
   public function serverVersion(\stdClass $request) {
-    // TODO: Implement serverVersion() method.
+    // @TODO: log this soap call.
+
+    $request->serverVersionResult = $this->serverVersion;
+    return $request;
   }
 
   /**
