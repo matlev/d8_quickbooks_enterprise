@@ -12,7 +12,19 @@ namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
  */
 class SoapService implements SoapServiceInterface {
 
+  /**
+   * The current server version.
+   *
+   * @var string
+   */
   private $serverVersion = '1.0';
+
+  /**
+   * The version returned by the client.
+   *
+   * @var string
+   */
+  protected $clientVersion;
 
   /**
    * {@inheritDoc}
@@ -28,7 +40,12 @@ class SoapService implements SoapServiceInterface {
    * {@inheritDoc}
    */
   public function clientVersion(\stdClass $request) {
-    // TODO: Implement clientVersion() method.
+    // @TODO: log this soap call.
+
+    $this->clientVersion = $request->strVersion;
+
+    $request->clientVersionResult = '';
+    return $request;
   }
 
   /**
