@@ -87,8 +87,6 @@ class SoapService implements SoapServiceInterface {
     // If the service isn't set for whatever reason we can't continue.
     if (!isset($this->userAuthInterface)) {
       // @TODO: log "Unable to authenticate user" message.
-
-      $result = array(session_id(), 'nvu');
     }
     else {
       $uid = $this->userAuthInterface->authenticate($strUserName, $strPassword);
