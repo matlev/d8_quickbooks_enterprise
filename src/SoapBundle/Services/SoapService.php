@@ -1,6 +1,7 @@
 <?php
 
 namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
+use Drupal\user\UserAuthInterface;
 
 /**
  * Handle SOAP requests and return a response.
@@ -11,6 +12,13 @@ namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
  * @package Drupal\commerce_quickbooks_enterprise\SoapBundle\Services
  */
 class SoapService implements SoapServiceInterface {
+
+  /**
+   * The user auth service.
+   *
+   * @var \Drupal\user\UserAuthInterface
+   */
+  private $userAuthInterface;
 
   /**
    * The current server version.
@@ -25,6 +33,22 @@ class SoapService implements SoapServiceInterface {
    * @var string
    */
   protected $clientVersion;
+
+  /**
+   * The UID of the logged-in SOAP client.
+   *
+   * @var int
+   */
+  protected $soapUserID;
+
+  /**
+   * SoapService constructor.
+   *
+   * @param \Drupal\user\UserAuthInterface $userAuthInterface
+   */
+  public function __construct(UserAuthInterface $userAuthInterface) {
+    $this->userAuthInterface = $userAuthInterface;
+  }
 
   /**
    * {@inheritDoc}
@@ -52,7 +76,36 @@ class SoapService implements SoapServiceInterface {
    * {@inheritDoc}
    */
   public function authenticate(\stdClass $request) {
-    // TODO: Implement authenticate() method.
+    // @TODO: log this soap call.
+
+    $strUserName = $request->strUserName;
+    $strPassword = $request->strPassword;
+
+    // Initial "fail" response.
+    $result = array(session_id(), 'nvu');
+
+    // If the service isn't set for whatever reason we can't continue.
+    if (!isset($this->userAuthInterface)) {
+      // @TODO: log "Unable to authenticate user" message.
+
+      $result = array(session_id(), 'nvu');
+    }
+    else {
+      $uid = $this->userAuthInterface->authenticate($strUserName, $strPassword);
+
+      if ($uid === FALSE) {
+        // @TODO: log "Invalid login" message.
+      }
+      else {
+        // @TODO: log "User $strUserName successfully authenticated" message.
+
+        $this->soapUserID = $uid;
+        $result = array($strUserName . "|" . $strPassword, '');
+      }
+    }
+
+    $request->authenticateResult = $result;
+    return $request;
   }
 
   /**
