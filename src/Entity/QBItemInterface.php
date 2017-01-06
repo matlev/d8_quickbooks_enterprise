@@ -3,8 +3,9 @@
 namespace Drupal\commerce_quickbooks_enterprise\Entity;
 
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityInterface;
 
-interface commerceQuickbooksEnterpriseQBItemInterface extends ContentEntityInterface {
+interface QBItemInterface extends ContentEntityInterface {
 
   /**
    * Gets the Item type.
@@ -36,6 +37,32 @@ interface commerceQuickbooksEnterpriseQBItemInterface extends ContentEntityInter
    *   The called QBItem entity.
    */
   public function setStatus($status);
+
+  /**
+   * Retrieve the referenced entity to be exported.
+   *
+   * @return EntityInterface
+   *   The entity associated with the QB Item
+   */
+  public function getExportableEntity();
+
+  /**
+   * Return information about the exportable entity.
+   *
+   * @return array
+   *   An array with keys entity_type, entity_id
+   */
+  public function getExportableEntityId();
+
+  /**
+   * Set the entity to be exported to Quickbooks.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *
+   * @return \Drupal\commerce_quickbooks_enterprise\Entity\commerceQuickbooksEnterpriseQBItemInterface
+   *   The called QBItem entity.
+   */
+  public function setExportableEntity(EntityInterface $entity);
 
   /**
    * Gets the QB Item creation timestamp.

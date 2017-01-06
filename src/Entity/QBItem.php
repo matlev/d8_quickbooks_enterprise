@@ -4,6 +4,7 @@ namespace Drupal\commerce_quickbooks_enterprise\Entity;
 
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityChangedTrait;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 
@@ -21,10 +22,20 @@ define('QB_EXPORT_FAIL', 2);
  * @package Drupal\commerce_quickbooks_enterprise\Entity
  *
  * @ContentEntityType (
- *   id = 'commerceQuickbooksEnterpriseItem',
+ *   id = 'qbitem',
+ *   label = @Translation("Quickbooks Item"),
+ *   handlers = {
+ *   },
+ *   admin_permission = "access content",
+ *   base_table = "qbitem",
+ *   entity_keys = {
+ *     "id" = "id",
+ *   },
+ *   links = {
+ *   },
  * )
  */
-class commerceQuickbooksEnterpriseQBItem extends ContentEntityBase implements commerceQuickbooksEnterpriseQBItemInterface {
+class QBItem extends ContentEntityBase implements QBItemInterface {
 
   use EntityChangedTrait;
 
@@ -58,8 +69,28 @@ class commerceQuickbooksEnterpriseQBItem extends ContentEntityBase implements co
   /**
    * {@inheritdoc}
    */
-  function getExportableEntity($entity_type_id) {
-    return $this->exportable_entity->referencedEntities();
+  public function getExportableEntity() {
+    return $this->get('exportable_entity')->entity;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getExportableEntityId() {
+    $entity = $this->get('exportable_entity');
+
+    return array(
+      'entity_type' => $entity->target_type,
+      'entity_id' => $entity->target_id,
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setExportableEntity(EntityInterface $entity) {
+    $this->set('exportable_entity', array('entity' => $entity));
+    return $this;
   }
 
   /**
@@ -82,7 +113,7 @@ class commerceQuickbooksEnterpriseQBItem extends ContentEntityBase implements co
    */
   public function getExportTime($format = \DateTime::ISO8601) {
     $time = $this->get('exported')->value;
-    $dateTime = \DateTime::createFromFormat(\DateTime::ISO8601, date($time));
+    $dateTime = \DateTime::createFromFormat(\DateTime::ISO8601, $time);
 
     return $dateTime->format($format);
   }
@@ -114,6 +145,7 @@ class commerceQuickbooksEnterpriseQBItem extends ContentEntityBase implements co
     $fields['exportable_entity'] = BaseFieldDefinition::create('dynamic_entity_reference')
       ->setLabel(t('Exportable Entity'))
       ->setDescription(t('The entity that will be processed and exported to quickbooks.'))
+      ->setCardinality(1)
       ->setRequired(TRUE)
       ->setReadOnly(TRUE);
 
