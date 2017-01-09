@@ -18,7 +18,7 @@ interface SoapServiceInterface {
    *
    * @return \stdClass
    */
-  public function serverVersion(\stdClass $request);
+  public function call_serverVersion(\stdClass $request);
 
   /**
    * Check client version
@@ -29,7 +29,7 @@ interface SoapServiceInterface {
    *
    * @return \stdClass
    */
-  public function clientVersion(\stdClass $request);
+  public function call_clientVersion(\stdClass $request);
 
   /**
    * Authenticate and initiate session with client
@@ -41,7 +41,7 @@ interface SoapServiceInterface {
    *
    * @return \stdClass
    */
-  public function authenticate(\stdClass $request);
+  public function call_authenticate(\stdClass $request);
 
   /**
    * Send data back to client
@@ -52,7 +52,7 @@ interface SoapServiceInterface {
    *
    * @return \stdClass
    */
-  public function sendRequestXML(\stdClass $request);
+  public function call_sendRequestXML(\stdClass $request);
 
   /**
    * Get response from last quickbooks operation
@@ -63,7 +63,7 @@ interface SoapServiceInterface {
    *
    * @return \stdClass
    */
-  public function receiveResponseXML(\stdClass $request);
+  public function call_receiveResponseXML(\stdClass $request);
 
   /**
    * Quickbooks error handler
@@ -74,7 +74,7 @@ interface SoapServiceInterface {
    *
    * @return \stdClass
    */
-  public function getLastError(\stdClass $request);
+  public function call_getLastError(\stdClass $request);
 
   /**
    * Close the connection
@@ -85,5 +85,5 @@ interface SoapServiceInterface {
    *
    * @return \stdClass
    */
-  public function closeConnection(\stdClass $request);
+  public function call_closeConnection(\stdClass $request);
 }
