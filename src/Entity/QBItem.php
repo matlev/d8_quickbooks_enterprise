@@ -22,12 +22,12 @@ define('QB_EXPORT_FAIL', 2);
  * @package Drupal\commerce_quickbooks_enterprise\Entity
  *
  * @ContentEntityType (
- *   id = 'qbitem',
+ *   id = 'commerce_quickbooks_enterprise_qbitem',
  *   label = @Translation("Quickbooks Item"),
  *   handlers = {
  *   },
  *   admin_permission = "access content",
- *   base_table = "qbitem",
+ *   base_table = "commerce_quickbooks_enterprise_qbitem",
  *   entity_keys = {
  *     "id" = "id",
  *   },

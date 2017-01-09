@@ -20,6 +20,8 @@ class SoapService implements SoapServiceInterface {
    */
   private $userAuthInterface;
 
+  private $qbxmlParser;
+
   /**
    * The current server version.
    *
@@ -46,16 +48,50 @@ class SoapService implements SoapServiceInterface {
    *
    * @param \Drupal\user\UserAuthInterface $userAuthInterface
    */
-  public function __construct(UserAuthInterface $userAuthInterface) {
+  public function __construct(UserAuthInterface $userAuthInterface, QBXMLParser $parser) {
     $this->userAuthInterface = $userAuthInterface;
+    $this->qbxmlParser= $parser;
+  }
+
+  /**
+   * Magic function to convert SOAP XMl to a stdClass object.
+   *
+   * @param $method
+   *   The wsdl call being invoked.
+   *
+   * @param $args
+   *   The SOAP request
+   *
+   * @return string
+   *   The xml string to return back to the client by the SOAP server.
+   */
+  public function __call($method, $args) {
+    // @TODO: log the incoming SOAP call.
+
+    $callback = "call_$method";
+
+    // Prepare the request from the client.
+    $request = new \stdClass();
+
+    if (is_callable($callback)) {
+      $xml_obj = simplexml_load_string($args);
+    }
+
+    $response = $this->prepareResponse($request);
+
+    return $response;
+  }
+
+  private function prepareResponse(\stdClass $data) {
+    $xml_response = "";
+
+    return $xml_response;
   }
 
   /**
    * {@inheritDoc}
    */
-  public function serverVersion(\stdClass $request) {
-    // @TODO: log this soap call.
-
+  public function call_serverVersion(\stdClass $request) {
     $request->serverVersionResult = $this->serverVersion;
     return $request;
   }
@@ -63,9 +99,7 @@ class SoapService implements SoapServiceInterface {
   /**
    * {@inheritDoc}
    */
-  public function clientVersion(\stdClass $request) {
-    // @TODO: log this soap call.
-
+  public function call_clientVersion(\stdClass $request) {
     $this->clientVersion = $request->strVersion;
 
     $request->clientVersionResult = '';
@@ -75,9 +109,7 @@ class SoapService implements SoapServiceInterface {
   /**
    * {@inheritDoc}
    */
-  public function authenticate(\stdClass $request) {
-    // @TODO: log this soap call.
-
+  public function call_authenticate(\stdClass $request) {
     $strUserName = $request->strUserName;
     $strPassword = $request->strPassword;
 
@@ -109,28 +141,28 @@ class SoapService implements SoapServiceInterface {
   /**
    * {@inheritDoc}
    */
-  public function sendRequestXML(\stdClass $request) {
+  public function call_sendRequestXML(\stdClass $request) {
     // TODO: Implement sendRequestXML() method.
   }
 
   /**
    * {@inheritDoc}
    */
-  public function receiveResponseXML(\stdClass $request) {
+  public function call_receiveResponseXML(\stdClass $request) {
     // TODO: Implement receiveResponseXML() method.
   }
 
   /**
    * {@inheritDoc}
    */
-  public function getLastError(\stdClass $request) {
+  public function call_getLastError(\stdClass $request) {
     // TODO: Implement getLastError() method.
   }
 
   /**
    * {@inheritDoc}
    */
-  public function closeConnection(\stdClass $request) {
+  public function call_closeConnection(\stdClass $request) {
     // TODO: Implement closeConnection() method.
   }
 }
