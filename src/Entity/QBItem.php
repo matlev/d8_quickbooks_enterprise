@@ -132,9 +132,20 @@ class QBItem extends ContentEntityBase implements QBItemInterface {
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
     $fields = parent::baseFieldDefinitions($entity_type);
 
-    $fields['item_type'] = BaseFieldDefinition::create('string')
+    $fields['item_type'] = BaseFieldDefinition::create('list_string')
       ->setLabel(t('Item Type'))
       ->setDescription(t('The QB Item type expected by Quickbooks.'))
+      ->setSettings(array(
+        'allowed_values' => array(
+          'add_customer' => 'Add Customer',
+          'add_inventory_product' => 'Add Inventory Product',
+          'add_non_inventory_product' => 'Add Non-Inventory Product',
+          'add_invoice' => 'Add Invoice',
+          'mod_invoice' => 'Mod Invoice',
+          'add_sales_receipt' => 'Add Sales Receipt',
+          'add_payment' => 'Add Payment',
+        ),
+      ))
       ->setRequired(TRUE);
 
     $fields['status'] = BaseFieldDefinition::create('integer')
