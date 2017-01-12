@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?qbxml version="13.0"?>
+<QBXML>
+    <QBXMLMsgsRq onError="stopOnError">
+        <InvoiceAddRq requestID="c-{{ print $order_id }}">
+            <InvoiceAdd>
+                <CustomerRef>
+                    {% if properties.customer_quickbooks_listid is not empty %}
+                    <ListID>{{ properties.customer_quickbooks_listid }}</ListID>
+                    {% else %}
+                    <FullName>{{ properties.last_name }}, {{ properties.first_name }}</FullName>
+                    {% endif %}
+                </CustomerRef>
+                <TxnDate>{{ properties.date }}</TxnDate>
+                <RefNumber>{{ properties.ref_number }}</RefNumber>
+                <BillAddress>
+                    <Addr1>{{ properties.thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.premise }}</Addr2>
+                    <Addr3>{{ properties.sub_premise }}</Addr3>
+                    <City>{{ properties.locality }}</City>
+                    <State>{{ properties.administrative_area }}</State>
+                    <PostalCode>{{ properties.postal_code }}</PostalCode>
+                    <Country>{{ properties.country }}</Country>
+                </BillAddress>
+                {% if properties.shipping_address is defined %}
+                <ShipAddress>
+                    <Addr1>{{ properties.ship_thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.ship_premise }}</Addr2>
+                    <Addr3>{{ properties.ship_sub_premise }}</Addr3>
+                    <City>{{ properties.ship_locality }}</City>
+                    <State>{{ properties.ship_administrative_area }}</State>
+                    <PostalCode>{{ properties.ship_postal_code }}</PostalCode>
+                    <Country>{{ properties.ship_country }}</Country>
+                </ShipAddress>
+                {% endif %}
+                {% if properties.tax_type is defined %}
+                <ItemSalesTaxRef>
+                    <FullName>{{ properties.tax_type }}</FullName>
+                </ItemSalesTaxRef>
+                {% endif %}
+                {% if properties.products is defined %}
+                    {% for product in properties.products %}
+                    <InvoiceLineAdd>
+                        <ItemRef>
+                            {% if product.quickbooks_listid is not empty %}
+                            <ListID>{{ product.quickbooks_listid }}</ListID>
+                            {% else %}
+                            <FullName>{{ product.sku }}</FullName>
+                            {% endif %}
+                        </ItemRef>
+                        <Desc>{{ product.title }}</Desc>
+                        <Quantity>{{ product.quantity }}</Quantity>
+                        <Rate>{{ product.price }}</Rate>
+                    </InvoiceLineAdd>
+                    {% endfor %}
+                    {% if properties.shipping is defined %}
+                    <InvoiceLineAdd>
+                        <ItemRef>
+                            <FullName>{{ properties.shipping_service }}</FullName>
+                        </ItemRef>
+                        <Desc>{{ properties.shipping_description }}</Desc>
+                        <Quantity>{{ properties.shipping_quantity }}</Quantity>
+                        <Rate>{{ properties.shipping_rate }}</Rate>
+                    </InvoiceLineAdd>
+                    {% endif %}
+                {% endif %}
+            </InvoiceAdd>
+        </InvoiceAddRq>
+    </QBXMLMsgsRq>
+</QBXML>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?qbxml version="13.0"?>
+<QBXML>
+    <QBXMLMsgsRq onError="stopOnError">
+        <CustomerAddRq>
+            <CustomerAdd>
+                <Name>{{ properties.last_name }}, {{ properties.first_name }}</Name>
+                <FirstName>{{ properties.first_name }}</FirstName>
+                <LastName>{{ properties.last_name }}</LastName>
+                <BillAddress>
+                    <Addr1>{{ properties.thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.premise }}</Addr2>
+                    {% if properties.sub_premise is defined %}
+                    <Addr3>{{ properties.sub_premise }}</Addr3>
+                    {% endif %}
+                    <City>{{ properties.locality }}</City>
+                    {% if properties.administrative_area is defined %}
+                    <State>{{ properties.administrative_area }}</State>
+                    {% endif %}
+                    <PostalCode>{{ properties.postal_code }}</PostalCode>
+                    <Country>{{ properties.country }}</Country>
+                </BillAddress>
+                {{ if properties.has_shipping is defined }}
+                <ShipAddress>
+                    <Addr1>{{ properties.ship_thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.ship_premise }}</Addr2>
+                    {% if properties.ship_sub_premise is defined %}
+                        <Addr3>{{ properties.ship_sub_premise }}</Addr3>
+                    {% endif %}
+                    <City>{{ properties.ship_locality }}</City>
+                    {% if properties.ship_administrative_area is defined %}
+                        <State>{{ properties.ship_administrative_area }}</State>
+                    {% endif %}
+                    <PostalCode>{{ properties.ship_postal_code }}</PostalCode>
+                    <Country>{{ properties.ship_country }}</Country>
+                </ShipAddress>
+                {% endif %}
+                <Phone>{{ properties.phone }}</Phone>
+                <Email>{{ properties.email }}</Email>
+                <Contact>{{ properties.name_line }}</Contact>
+            </CustomerAdd>
+        </CustomerAddRq>
+    </QBXMLMsgsRq>
+</QBXML>

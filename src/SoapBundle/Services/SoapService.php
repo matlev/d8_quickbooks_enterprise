@@ -20,6 +20,11 @@ class SoapService implements SoapServiceInterface {
    */
   private $userAuthInterface;
 
+  /**
+   * The QBXML parser service.
+   *
+   * @var \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\QBXMLParser
+   */
   private $qbxmlParser;
 
   /**
@@ -47,10 +52,11 @@ class SoapService implements SoapServiceInterface {
    * SoapService constructor.
    *
    * @param \Drupal\user\UserAuthInterface $userAuthInterface
+   * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\QBXMLParser $parser
    */
   public function __construct(UserAuthInterface $userAuthInterface, QBXMLParser $parser) {
     $this->userAuthInterface = $userAuthInterface;
-    $this->qbxmlParser= $parser;
+    $this->qbxmlParser = $parser;
   }
 
   /**

@@ -20,13 +20,8 @@ class QBXMLParser {
 
   /**
    * QBXMLParser constructor.
-   *
-   * @param $xml
-   *   Optionally set the incoming request XML on construction.
    */
-  public function __construct($xml) {
-    $this->requestXML = $xml;
-  }
+  public function __construct() {}
 
   /**
    * Set the SOAP request XML.
@@ -73,9 +68,19 @@ class QBXMLParser {
   }
 
   /**
+   * Builds the SOAP server response.
    *
+   * @param string $type
+   *   The type of response XML WebConnect is expecting.  The accepted values
+   * are set in the baseFieldDefinition of the
+   * commerce_quickbooks_enterprise_qbitem entity.
+   *
+   * @see Drupal\commerce_quickbooks_enterprise\Entity\QBItem::baseFieldDefinitions()
+   *
+   * @param \stdClass $properties
+   *   A basic object containing keyed values for the QBXML template.
    */
-  public function buildResponseXML($type) {
+  public function buildResponseXML($type, \stdClass $properties) {
     // Retrieve the valid types of QB Items we're allowed to export
     $bundle_fields = \Drupal::getContainer()->get('entity_field.manager')->getFieldDefinitions("commerce_quickbooks_enterprise_qbitem");
     $field_definition = $bundle_fields['item_type'];
@@ -87,8 +92,20 @@ class QBXMLParser {
       return;
     }
 
+    // Call the appropriate QBXML template.
+    $qbxml_theme = array(
+      '#theme' => $type . '_qbxml',
+      '#properties' => $properties,
+    );
+    $qbxml = \Drupal::service('renderer')->render($qbxml_theme, FALSE);
 
+    // If something went wrong during the render, return a null result.
+    if (empty($qbxml)) {
+      $this->responseXML = null;
+      return;
+    }
 
+    $this->responseXML = $qbxml;
   }
 
 }

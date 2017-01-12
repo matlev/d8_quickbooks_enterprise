@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?qbxml version="13.0"?>
+<QBXML>
+    <QBXMLMsgsRq onError="stopOnError">
+        <ItemNonInventoryAddRq requestID="p-{{ properties.product_id }}">
+            <ItemNonInventoryAdd>
+                <Name>{{ properties.sku }}</Name>
+                {% if properties.parent_sku is defined %}
+                <ParentRef>
+                    <FullName>{{ properties.parent_sku }}</FullName>
+                </ParentRef>
+                {% endif %}
+                <SalesOrPurchase>
+                    <Desc>{{ properties.title }}</Desc>
+                    <Price>{{ properties.price }}</Price>
+                    <AccountRef>
+                        <FullName>{{ properties.income }}</FullName>
+                    </AccountRef>
+                </SalesOrPurchase>
+            </ItemNonInventoryAdd>
+        </ItemNonInventoryAddRq>
+    </QBXMLMsgsRq>
+</QBXML>
