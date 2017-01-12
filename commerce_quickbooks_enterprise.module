@@ -26,6 +26,43 @@ function commerce_quickbooks_enterprise_help($route_name, RouteMatchInterface $r
 }
 
 /**
+ * Implements hook_theme().
+ *
+ * The QBXML theme templates.
+ *
+ * @param $existing
+ * @param $type
+ * @param $theme
+ * @param $path
+ * @return array
+ */
+function commerce_quickbooks_enterprise_theme($existing, $type, $theme, $path) {
+  return array(
+    'add_customer_qbxml' => array(
+      'variables' => array('properties' => NULL),
+    ),
+    'add_inventory_product_qbxml' => array(
+      'variables' => array('properties' => NULL),
+    ),
+    'add_invoice_qbxml' => array(
+      'variables' => array('properties' => NULL),
+    ),
+    'add_non_inventory_product_qbxml' => array(
+      'variables' => array('properties' => NULL),
+    ),
+    'add_payment_qbxml' => array(
+      'variables' => array('properties' => NULL),
+    ),
+    'add_sales_receipt_qbxml' => array(
+      'variables' => array('properties' => NULL),
+    ),
+    'mod_invoice_qbxml' => array(
+      'variables' => array('properties' => NULL),
+    ),
+  );
+}
+
+/**
  * Implements hook_ENTITY_TYPE_create().
  *
  * Dispatches a commerce_quickbooks_enterprise.user.create event.

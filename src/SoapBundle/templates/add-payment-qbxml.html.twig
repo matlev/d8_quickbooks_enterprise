@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?qbxml version="13.0"?>
+<QBXML>
+    <QBXMLMsgsRq onError="stopOnError">
+        <ReceivePaymentAddRq>
+            <ReceivePaymentAdd>
+                <CustomerRef>
+                    {% if properties.customer_quickbooks_listid is not empty %}
+                    <ListID>{{ print $customer_quickbooks_listid; }}</ListID>
+                    {% else %}
+                    <FullName>{{ properties.last_name}}, {{ properties.first_name }}</FullName>
+                    {% endif %}
+                </CustomerRef>
+                <TxnDate>{{ properties.date }}</TxnDate>
+                <RefNumber>{{ properties.ref_number }}</RefNumber>
+                <TotalAmount>{{ properties.amount }}</TotalAmount>
+                <PaymentMethodRef>
+                    <FullName>{{ properties.payment_method }}</FullName>
+                </PaymentMethodRef>
+                {% if properties.order_txnid is empty %}
+                <IsAutoApply>true</IsAutoApply>
+                {% else %}
+                <AppliedToTxnAdd>
+                    <TxnID>{{ properties.order_txnid }}</TxnID>
+                    <PaymentAmount>{{ properties.order_payment_amount }}</PaymentAmount>
+                </AppliedToTxnAdd>
+                {% endif %}
+            </ReceivePaymentAdd>
+        </ReceivePaymentAddRq>
+    </QBXMLMsgsRq>
+</QBXML>

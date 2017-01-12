@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?qbxml version="13.0"?>
+<QBXML>
+    <QBXMLMsgsRq onError="stopOnError">
+        <ItemInventoryAddRq requestID="p-{{ properties.product_id }}">
+            <ItemInventoryAdd>
+                <Name>{{ properties.sku }}</Name>
+                {% if properties.parent_sku is defined %}
+                <ParentRef>
+                    <FullName>{{ properties.parent_sku }}</FullName>
+                </ParentRef>
+                {% endif %}
+                <SalesDesc>{{ print properties.title }}</SalesDesc>
+                <SalesPrice>{{ properties.price }}</SalesPrice>
+                <IncomeAccountRef>
+                    <FullName>{{ properties.income }}</FullName>
+                </IncomeAccountRef>
+                <COGSAccountRef>
+                    <FullName>{{ properties.cogs }}</FullName>
+                </COGSAccountRef>
+                <AssetAccountRef>
+                    <FullName>{{ properties.assets }}</FullName>
+                </AssetAccountRef>
+            </ItemInventoryAdd>
+        </ItemInventoryAddRq>
+    </QBXMLMsgsRq>
+</QBXML>
