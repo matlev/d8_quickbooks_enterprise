@@ -72,13 +72,16 @@ class QBXMLParser {
    *
    * @param string $type
    *   The type of response XML WebConnect is expecting.  The accepted values
-   * are set in the baseFieldDefinition of the
-   * commerce_quickbooks_enterprise_qbitem entity.
+   *   are set in the baseFieldDefinition of the
+   *   commerce_quickbooks_enterprise_qbitem entity.
    *
    * @see Drupal\commerce_quickbooks_enterprise\Entity\QBItem::baseFieldDefinitions()
    *
    * @param \stdClass $properties
    *   A basic object containing keyed values for the QBXML template.
+   *
+   * @return QBXMLParser
+   *   The parser for chaining calls.
    */
   public function buildResponseXML($type, \stdClass $properties) {
     // Retrieve the valid types of QB Items we're allowed to export
@@ -89,7 +92,7 @@ class QBXMLParser {
     // Return an empty response if the $type isn't valid
     if (!in_array($type, $valid_types)) {
       $this->responseXML = null;
-      return;
+      return $this;
     }
 
     // Call the appropriate QBXML template.
@@ -102,10 +105,19 @@ class QBXMLParser {
     // If something went wrong during the render, return a null result.
     if (empty($qbxml)) {
       $this->responseXML = null;
-      return;
+      return $this;
     }
 
     $this->responseXML = $qbxml;
+    return $this;
   }
 
+  /**
+   * Get the XML response for WebConnect.
+   *
+   * @return string
+   */
+  public function getResponseXML() {
+    return $this->responseXML;
+  }
 }

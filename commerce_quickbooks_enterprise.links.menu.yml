@@ -5,3 +5,10 @@ commerce_quickbooks_enterprise.quickbooks_admin_form:
   parent: system.admin_config_system
   weight: 99
 
+commerce_quickbooks_enterprise.quickbooks_qwc_form:
+  title: 'Quickbooks QWC Generator'
+  route_name: commerce_quickbooks_enterprise.quickbooks_qwc_form
+  description: 'Commerce Quickbooks QWC generation form'
+  parent: commerce_quickbooks_enterprise.quickbooks_admin_form
+  weight: 99
+

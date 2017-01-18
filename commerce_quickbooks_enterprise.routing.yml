@@ -9,6 +9,16 @@ commerce_quickbooks_enterprise.quickbooks_admin_form:
   options:
     _admin_route: TRUE
 
+commerce_quickbooks_enterprise.quickbooks_qwc_form:
+  path: '/admin/config/commerce_quickbooks_enterprise/qwc'
+  defaults:
+    _form: '\Drupal\commerce_quickbooks_enterprise\Form\QuickbooksQWCForm'
+    _title: 'QuickbooksQWCForm'
+  requirements:
+    _permission: 'access administration pages'
+  options:
+    _admin_route: TRUE
+
 commerce_quickbooks_enterprise.quickbooks_soap_controller:
   path: '/qb_soap'
   defaults:

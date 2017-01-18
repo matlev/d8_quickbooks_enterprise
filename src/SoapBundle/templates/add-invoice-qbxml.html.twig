@@ -2,7 +2,7 @@
 <?qbxml version="13.0"?>
 <QBXML>
     <QBXMLMsgsRq onError="stopOnError">
-        <InvoiceAddRq requestID="c-{{ print $order_id }}">
+        <InvoiceAddRq requestID="c-{{ properties.order_id }}">
             <InvoiceAdd>
                 <CustomerRef>
                     {% if properties.customer_quickbooks_listid is not empty %}
@@ -14,23 +14,23 @@
                 <TxnDate>{{ properties.date }}</TxnDate>
                 <RefNumber>{{ properties.ref_number }}</RefNumber>
                 <BillAddress>
-                    <Addr1>{{ properties.thoroughfare }}</Addr1>
-                    <Addr2>{{ properties.premise }}</Addr2>
-                    <Addr3>{{ properties.sub_premise }}</Addr3>
-                    <City>{{ properties.locality }}</City>
-                    <State>{{ properties.administrative_area }}</State>
-                    <PostalCode>{{ properties.postal_code }}</PostalCode>
-                    <Country>{{ properties.country }}</Country>
+                    <Addr1>{{ properties.billing_address.thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.billing_address.premise }}</Addr2>
+                    <Addr3>{{ properties.billing_address.sub_premise }}</Addr3>
+                    <City>{{ properties.billing_address.locality }}</City>
+                    <State>{{ properties.billing_address.administrative_area }}</State>
+                    <PostalCode>{{ properties.billing_address.postal_code }}</PostalCode>
+                    <Country>{{ properties.billing_address.country }}</Country>
                 </BillAddress>
                 {% if properties.shipping_address is defined %}
                 <ShipAddress>
-                    <Addr1>{{ properties.ship_thoroughfare }}</Addr1>
-                    <Addr2>{{ properties.ship_premise }}</Addr2>
-                    <Addr3>{{ properties.ship_sub_premise }}</Addr3>
-                    <City>{{ properties.ship_locality }}</City>
-                    <State>{{ properties.ship_administrative_area }}</State>
-                    <PostalCode>{{ properties.ship_postal_code }}</PostalCode>
-                    <Country>{{ properties.ship_country }}</Country>
+                    <Addr1>{{ properties.shipping_address.thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.shipping_address.premise }}</Addr2>
+                    <Addr3>{{ properties.shipping_address.sub_premise }}</Addr3>
+                    <City>{{ properties.shipping_address.locality }}</City>
+                    <State>{{ properties.shipping_address.administrative_area }}</State>
+                    <PostalCode>{{ properties.shipping_address.postal_code }}</PostalCode>
+                    <Country>{{ properties.shipping_address.country }}</Country>
                 </ShipAddress>
                 {% endif %}
                 {% if properties.tax_type is defined %}
@@ -56,11 +56,11 @@
                     {% if properties.shipping is defined %}
                     <InvoiceLineAdd>
                         <ItemRef>
-                            <FullName>{{ properties.shipping_service }}</FullName>
+                            <FullName>{{ properties.shipping.service }}</FullName>
                         </ItemRef>
-                        <Desc>{{ properties.shipping_description }}</Desc>
-                        <Quantity>{{ properties.shipping_quantity }}</Quantity>
-                        <Rate>{{ properties.shipping_rate }}</Rate>
+                        <Desc>{{ properties.shipping.description }}</Desc>
+                        <Quantity>{{ properties.shipping.quantity }}</Quantity>
+                        <Rate>{{ properties.shipping.rate }}</Rate>
                     </InvoiceLineAdd>
                     {% endif %}
                 {% endif %}
