@@ -4,40 +4,40 @@
     <QBXMLMsgsRq onError="stopOnError">
         <CustomerAddRq>
             <CustomerAdd>
-                <Name>{{ properties.last_name }}, {{ properties.first_name }}</Name>
-                <FirstName>{{ properties.first_name }}</FirstName>
-                <LastName>{{ properties.last_name }}</LastName>
+                <Name>{{ properties.billing.last_name }}, {{ properties.billing.first_name }}</Name>
+                <FirstName>{{ properties.billing.first_name }}</FirstName>
+                <LastName>{{ properties.billing.last_name }}</LastName>
                 <BillAddress>
-                    <Addr1>{{ properties.thoroughfare }}</Addr1>
-                    <Addr2>{{ properties.premise }}</Addr2>
-                    {% if properties.sub_premise is defined %}
-                    <Addr3>{{ properties.sub_premise }}</Addr3>
+                    <Addr1>{{ properties.billing.thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.billing.premise }}</Addr2>
+                    {% if properties.billing.sub_premise is defined %}
+                    <Addr3>{{ properties.billing.sub_premise }}</Addr3>
                     {% endif %}
-                    <City>{{ properties.locality }}</City>
-                    {% if properties.administrative_area is defined %}
-                    <State>{{ properties.administrative_area }}</State>
+                    <City>{{ properties.billing.locality }}</City>
+                    {% if properties.billing.administrative_area is defined %}
+                    <State>{{ properties.billing.administrative_area }}</State>
                     {% endif %}
-                    <PostalCode>{{ properties.postal_code }}</PostalCode>
-                    <Country>{{ properties.country }}</Country>
+                    <PostalCode>{{ properties.billing.postal_code }}</PostalCode>
+                    <Country>{{ properties.billing.country }}</Country>
                 </BillAddress>
-                {{ if properties.has_shipping is defined }}
+                {{ if properties.shipping is defined }}
                 <ShipAddress>
-                    <Addr1>{{ properties.ship_thoroughfare }}</Addr1>
-                    <Addr2>{{ properties.ship_premise }}</Addr2>
-                    {% if properties.ship_sub_premise is defined %}
-                        <Addr3>{{ properties.ship_sub_premise }}</Addr3>
+                    <Addr1>{{ properties.shipping.thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.shipping.premise }}</Addr2>
+                    {% if properties.shipping.sub_premise is defined %}
+                        <Addr3>{{ properties.shipping.sub_premise }}</Addr3>
                     {% endif %}
-                    <City>{{ properties.ship_locality }}</City>
-                    {% if properties.ship_administrative_area is defined %}
-                        <State>{{ properties.ship_administrative_area }}</State>
+                    <City>{{ properties.shipping.locality }}</City>
+                    {% if properties.shipping.administrative_area is defined %}
+                        <State>{{ properties.shipping.administrative_area }}</State>
                     {% endif %}
-                    <PostalCode>{{ properties.ship_postal_code }}</PostalCode>
-                    <Country>{{ properties.ship_country }}</Country>
+                    <PostalCode>{{ properties.shipping.postal_code }}</PostalCode>
+                    <Country>{{ properties.shipping.country }}</Country>
                 </ShipAddress>
                 {% endif %}
                 <Phone>{{ properties.phone }}</Phone>
                 <Email>{{ properties.email }}</Email>
-                <Contact>{{ properties.name_line }}</Contact>
+                <Contact>{{ properties.billing.name_line }}</Contact>
             </CustomerAdd>
         </CustomerAddRq>
     </QBXMLMsgsRq>

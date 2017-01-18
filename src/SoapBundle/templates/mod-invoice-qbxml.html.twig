@@ -2,6 +2,73 @@
 <?qbxml version="13.0"?>
 <QBXML>
     <QBXMLMsgsRq onError="stopOnError">
-
+        <InvoiceModRq requestID="om-{{ properties.order_id }}">
+            <InvoiceMod>
+                <TxnID>{{ properties.quickbooks_order_txnid }}</TxnID>
+                <EditSequence>{{ properties.quickbooks_order_edit_sequence }}</EditSequence>
+                <CustomerRef>
+                    {% if properties.customer_quickbooks_listid is not empty %}
+                    <ListID>{{ properties.customer_quickbooks_listid }}</ListID>
+                    {% else %}
+                    <FullName>{{ properties.last_name}}, {{ properties.first_name }}</FullName>
+                    {% endif %}
+                </CustomerRef>
+                <TxnDate>{{ properties.date }}</TxnDate>
+                <RefNumber>{{ properties.ref_number }}</RefNumber>
+                <BillAddress>
+                    <Addr1>{{ properties.billing_address.thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.billing_address.premise }}</Addr2>
+                    <Addr3>{{ properties.billing_address.sub_premise }}</Addr3>
+                    <City>{{ properties.billing_address.locality }}</City>
+                    <State>{{ properties.billing_address.administrative_area }}</State>
+                    <PostalCode>{{ properties.billing_address.postal_code }}</PostalCode>
+                    <Country>{{ properties.billing_address.country }}</Country>
+                </BillAddress>
+                {% if properties.shipping_address is defined %}
+                <ShipAddress>
+                    <Addr1>{{ properties.shipping_address.thoroughfare }}</Addr1>
+                    <Addr2>{{ properties.shipping_address.premise }}</Addr2>
+                    <Addr3>{{ properties.shipping_address.sub_premise }}</Addr3>
+                    <City>{{ properties.shipping_address.locality }}</City>
+                    <State>{{ properties.shipping_address.administrative_area }}</State>
+                    <PostalCode>{{ properties.shipping_address.postal_code }}</PostalCode>
+                    <Country>{{ properties.shipping_address.country }}</Country>
+                </ShipAddress>
+                {% endif %}
+                {% if properties.tax_type is defined %}
+                <ItemSalesTaxRef>
+                    <FullName>{{ properties.tax_type }}</FullName>
+                </ItemSalesTaxRef>
+                {% endif %}
+                {% if properties.products is defined %}
+                    {% for product in properties.products %}
+                    <InvoiceLineMod>
+                        <TxnLineID>-1</TxnLineID>
+                        <ItemRef>
+                            {% if product.quickbooks_listid is not empty %}
+                            <ListID>{{ product.quickbooks_listid }}</ListID>
+                            {% else %}
+                            <FullName>{{ product.sku }}</FullName>
+                            {% endif %}
+                        </ItemRef>
+                        <Desc>{{ product.title }}</Desc>
+                        <Quantity>{{ product.quantity }}</Quantity>
+                        <Rate>{{ product.price }}</Rate>
+                    </InvoiceLineMod>
+                    {% endfor %}
+                    {% if properties.shipping is defined %}
+                    <InvoiceLineMod>
+                        <TxnLineID>-1</TxnLineID>
+                        <ItemRef>
+                            <FullName>{{ properties.shipping.service }}</FullName>
+                        </ItemRef>
+                        <Desc>{{ properties.shipping.description }}</Desc>
+                        <Quantity>{{ properties.shipping.quantity }}</Quantity>
+                        <Rate>{{ properties.shipping.rate }}</Rate>
+                    </InvoiceLineMod>
+                    {% endif %}
+                {% endif %}
+            </InvoiceMod>
+        </InvoiceModRq>
     </QBXMLMsgsRq>
 </QBXML>

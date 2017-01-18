@@ -60,38 +60,62 @@ class SoapService implements SoapServiceInterface {
   }
 
   /**
-   * Magic function to convert SOAP XMl to a stdClass object.
+   * Builds a response to WebConnect out of the incoming raw request.
+   *
+   * A response to Quickbooks is expected to be formatted as a stdClass object
+   * with a property named [methodName]Result that contains an array/string
+   * formatted to the QBWC specs.
    *
    * @param $method
    *   The wsdl call being invoked.
-   *
-   * @param $args
+   * @param $data
    *   The SOAP request
    *
    * @return string
    *   The xml string to return back to the client by the SOAP server.
    */
-  public function __call($method, $args) {
+  public function __call($method, $data) {
     // @TODO: log the incoming SOAP call.
 
     $callback = "call_$method";
 
-    // Prepare the request from the client.
-    $request = new \stdClass();
+    $response = NULL;
 
+    // If a valid method method is being called, parse the incoming request
+    // and call the method with the parsed data passed in.
     if (is_callable($callback)) {
-      $xml_obj = simplexml_load_string($args);
+      // Prepare the response to the client.
+      $request = $this->prepareResponse($method, $data);
+      $response = $callback($request);
     }
-
-    $response = $this->prepareResponse($request);
 
     return $response;
   }
 
-  private function prepareResponse(\stdClass $data) {
-    $xml_response = "";
+  /**
+   * Builds the stdClass object required by a service response handler.
+   *
+   * @param string $method_name
+   *   The Quikcbooks method being called.
+   * @param string $data
+   *   The raw incoming soap request.
+   *
+   * @return \stdClass
+   *   An object with the following properties:
+   *   stdClass {
+   *     methodNameResult => '',
+   *     requestParam1 => 'foo',
+   *     ...
+   *     requestParamN => 'bar',
+   *   }
+   */
+  private function prepareResponse($method_name, $data) {
+    $response = new \stdClass;
+    $response->$method_name = '';
 
-    return $xml_response;
+    simplexml_load_string($data);
+
+    return $response;
   }
 
   /**
