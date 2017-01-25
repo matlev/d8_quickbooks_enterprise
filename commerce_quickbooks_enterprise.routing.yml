@@ -24,5 +24,5 @@ commerce_quickbooks_enterprise.quickbooks_soap_controller:
   defaults:
     _controller: '\Drupal\commerce_quickbooks_enterprise\SoapBundle\SoapServiceController::handleRequest'
   requirements:
-    _permission: 'access administration pages'
+    _permission: 'access content'
 

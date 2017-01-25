@@ -30,3 +30,4 @@ commerce_quickbooks_enterprise:
   order_export_type: "0"
   quickbooks_invoice_number_prefix: "o"
   quickbooks_payment_reference_num: "op"
+  qwc_owner_id: ""
