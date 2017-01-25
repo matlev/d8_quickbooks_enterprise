@@ -77,8 +77,17 @@ class SoapService implements SoapServiceInterface {
   public function __call($method, $data) {
     // @TODO: log the incoming SOAP call.
 
-    $callback = "call_$method";
+    // The first call is always 'authenticate', which connects WebConnect to our
+    // site with a privileged QB SOAP user.  If we're not calling 'authenticate'
+    // then we need to make sure that the current user has the correct permissions.
+    if ($method != 'authenticate') {
+      if (!\Drupal::currentUser()->hasPermission('access quickbooks soap service')) {
+        // If the user doesn't have permission, return an empty response.
+        return $this->prepareResponse($method, $data);
+      }
+    }
 
+    $callback = "call_$method";
     $response = NULL;
 
     // If a valid method method is being called, parse the incoming request

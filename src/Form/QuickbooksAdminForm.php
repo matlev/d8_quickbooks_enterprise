@@ -32,6 +32,10 @@ class QuickbooksAdminForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
+    // Generate a unique owner Id for the QWC file.
+    $uuid = \Drupal::service('uuid');
+    $qwc_owner_id = $uuid->generate();
+
     $config = $this->config('commerce_quickbooks_enterprise.QuickbooksAdmin');
     $form['main_income_account'] = [
       '#type' => 'textfield',
@@ -172,6 +176,11 @@ class QuickbooksAdminForm extends ConfigFormBase {
       '#size' => 32,
       '#default_value' => $config->get('quickbooks_payment_reference_num'),
     ];
+    $form['qwc_owner_id'] = [
+      '#type' => 'hidden',
+      '#value' => $qwc_owner_id,
+      '#default_value' => $config->get('qwc_owner_id'),
+    ];
     return parent::buildForm($form, $form_state);
   }
 
@@ -209,6 +218,7 @@ class QuickbooksAdminForm extends ConfigFormBase {
       ->set('order_export_type', $form_state->getValue('order_export_type'))
       ->set('quickbooks_invoice_number_prefix', $form_state->getValue('quickbooks_invoice_number_prefix'))
       ->set('quickbooks_payment_reference_num', $form_state->getValue('quickbooks_payment_reference_num'))
+      ->set('qbe.qwc_owner_id', $form_state->getValue('qwc_owner_id'))
       ->save();
   }
 

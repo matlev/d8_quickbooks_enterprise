@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * Implements hook_install().
+ *
+ * Create the "Quickbooks User" user role and attach permissions to it.
+ */
+function commerce_quickbooks_enterprise_install() {
+  $quickbooks_user = [
+    'id' => 'quickbooks_user',
+    'label' => 'Quickbooks User',
+  ];
+
+  // Create the role
+  $role = \Drupal\user\Entity\Role::create($quickbooks_user);
+  $role->save();
+
+  // Load the role and grant permissions
+  $role = \Drupal\user\Entity\Role::load('quickbooks_user');
+  $role->grantPermission('access quickbooks soap service');
+  $role->save();
+
+  // Create a new user with the quickbooks_user role.
+  $user = \Drupal\user\Entity\User::create();
+  $user->setPassword('quickbooks_user');
+  $user->enforceIsNew();
+  $user->setEmail('test@test.com');
+  $user->setUsername('quickbooks_user');
+  $user->activate();
+
+  // Try to save the user.  If it failed, inform the admin that they will have
+  // to manually create a user with the quickbooks_user role.
+  try {
+    $res = $user->save();
+  }
+  catch (\Drupal\Core\Entity\EntityStorageException $e) {
+    drupal_set_message(t('A Quickbooks User account was unable to be created.  You will have to manually create a new user with the "Quickbooks User" role.'), 'error');
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Deletes our quickbooks_user role.
+ */
+function commerce_quickbooks_enterprise_uninstall() {
+  $role = \Drupal\user\Entity\Role::load('quickbooks_user');
+  $role->delete();
+}
+
+
