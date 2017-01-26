@@ -22,7 +22,7 @@ define('QB_EXPORT_FAIL', 2);
  * @package Drupal\commerce_quickbooks_enterprise\Entity
  *
  * @ContentEntityType (
- *   id = 'commerce_quickbooks_enterprise_qbitem',
+ *   id = "commerce_qbe_qbitem",
  *   label = @Translation("Quickbooks Item"),
  *   handlers = {
  *   },
@@ -164,7 +164,7 @@ class QBItem extends ContentEntityBase implements QBItemInterface {
       ->setLabel(t('Created'))
       ->setDescription(t('The time that the entity was created.'));
 
-    $fields['exported'] = BaseFieldDefinition::create('date')
+    $fields['exported'] = BaseFieldDefinition::create('datetime')
       ->setLabel(t('Exported timestamp'))
       ->setDescription(t('The time that the Item was exported.'));
 

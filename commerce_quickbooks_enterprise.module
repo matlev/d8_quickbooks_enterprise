@@ -59,6 +59,9 @@ function commerce_quickbooks_enterprise_theme($existing, $type, $theme, $path) {
     'mod_invoice_qbxml' => array(
       'variables' => array('properties' => NULL),
     ),
+    'commerce_quickbooks_enterprise_qwc' => array(
+      'variables' => array('properties' => NULL),
+    ),
   );
 }
 

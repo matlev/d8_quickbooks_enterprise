@@ -3,3 +3,8 @@ type: module
 description: Drupal to Quickbooks Enterprise editions via SOAP service
 core: 8.x
 package: Quickbooks
+
+dependencies:
+  - dynamic_entity_reference:dynamic_entity_reference
+
+configure: commerce_quickbooks_enterprise.QuickbooksAdmin

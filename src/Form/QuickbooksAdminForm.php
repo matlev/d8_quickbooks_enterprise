@@ -32,11 +32,18 @@ class QuickbooksAdminForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    // Generate a unique owner Id for the QWC file.
-    $uuid = \Drupal::service('uuid');
-    $qwc_owner_id = $uuid->generate();
-
     $config = $this->config('commerce_quickbooks_enterprise.QuickbooksAdmin');
+
+    // Check if we have a GUID before creating one.
+    if (empty($config->get('qwc_owner_id'))) {
+      $uuid = \Drupal::service('uuid');
+      $qwc_owner_id = $uuid->generate();
+    }
+    else {
+      $qwc_owner_id = $config->get('qwc_owner_id');
+    }
+
+
     $form['main_income_account'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Main income account'),
@@ -179,7 +186,6 @@ class QuickbooksAdminForm extends ConfigFormBase {
     $form['qwc_owner_id'] = [
       '#type' => 'hidden',
       '#value' => $qwc_owner_id,
-      '#default_value' => $config->get('qwc_owner_id'),
     ];
     return parent::buildForm($form, $form_state);
   }
@@ -198,9 +204,9 @@ class QuickbooksAdminForm extends ConfigFormBase {
     parent::submitForm($form, $form_state);
 
     $this->config('commerce_quickbooks_enterprise.QuickbooksAdmin')
-      ->set('qbe.main_income_account', $form_state->getValue('main_income_account'))
-      ->set('qbe.cogs_account', $form_state->getValue('cogs_account'))
-      ->set('qbe.assets_account', $form_state->getValue('assets_account'))
+      ->set('main_income_account', $form_state->getValue('main_income_account'))
+      ->set('cogs_account', $form_state->getValue('cogs_account'))
+      ->set('assets_account', $form_state->getValue('assets_account'))
       ->set('type_of_item_to_create_in_quickb', $form_state->getValue('type_of_item_to_create_in_quickb'))
       ->set('shipping_service', $form_state->getValue('shipping_service'))
       ->set('shipping_service_description', $form_state->getValue('shipping_service_description'))
@@ -218,7 +224,7 @@ class QuickbooksAdminForm extends ConfigFormBase {
       ->set('order_export_type', $form_state->getValue('order_export_type'))
       ->set('quickbooks_invoice_number_prefix', $form_state->getValue('quickbooks_invoice_number_prefix'))
       ->set('quickbooks_payment_reference_num', $form_state->getValue('quickbooks_payment_reference_num'))
-      ->set('qbe.qwc_owner_id', $form_state->getValue('qwc_owner_id'))
+      ->set('qwc_owner_id', $form_state->getValue('qwc_owner_id'))
       ->save();
   }
 
