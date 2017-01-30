@@ -6,5 +6,8 @@ package: Quickbooks
 
 dependencies:
   - dynamic_entity_reference:dynamic_entity_reference
+  - commerce:commerce
+  - commerce:commerce_order
+  - commerce:commerce_product
 
 configure: commerce_quickbooks_enterprise.QuickbooksAdmin

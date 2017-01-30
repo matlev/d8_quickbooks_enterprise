@@ -11,6 +11,26 @@ namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
 interface SoapServiceInterface {
 
   /**
+   * Process the incoming request and call the appropriate service method.
+   *
+   * This magic function is responsible for processing the incoming SOAP request
+   * and doing user session validation if required for the incoming service call.
+   *
+   * A response to Quickbooks is expected to be formatted as a stdClass object
+   * with a property named [methodName]Result that contains an array/string
+   * formatted to the QBWC specs.
+   *
+   * @param $method
+   *   The wsdl call being invoked.
+   * @param $data
+   *   The SOAP request object.
+   *
+   * @return \stdClass
+   *   The response object expected by Quickbooks.
+   */
+  public function __call($method, $data);
+
+  /**
    * Send the server version to the client
    *
    * @param \stdClass $request
@@ -46,6 +66,8 @@ interface SoapServiceInterface {
   /**
    * Send data back to client
    *
+   * Requires session validation.
+   *
    * @param \stdClass $request
    *   $request->ticket
    *   $request->sendRequestXMLResult
@@ -56,6 +78,8 @@ interface SoapServiceInterface {
 
   /**
    * Get response from last quickbooks operation
+   *
+   * Requires session validation.
    *
    * @param \stdClass $request
    *   $request->ticket
@@ -68,6 +92,8 @@ interface SoapServiceInterface {
   /**
    * Quickbooks error handler
    *
+   * Requires session validation.
+   *
    * @param \stdClass $request
    *   $request->ticket
    *   $request->getLastErrorResult
@@ -78,6 +104,8 @@ interface SoapServiceInterface {
 
   /**
    * Close the connection
+   *
+   * Requires session validation.
    *
    * @param \stdClass $request
    *   $request->ticket
