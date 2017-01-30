@@ -60,7 +60,12 @@ class QuickbooksQWCForm extends FormBase {
     }
 
     // Finished pre-setup, create form now.
-    $form['app_name'] = [
+    $form['container'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('QWC generation form'),
+    ];
+
+    $form['container']['app_name'] = [
       '#type' => 'textfield',
       '#title' => $this->t('App Name'),
       '#description' => $this->t('The name of the application visible to the user. This name is displayed in the QB web connector. It is also the name supplied in the SDK OpenConnection call to QuickBooks or QuickBooks POS'),
@@ -71,7 +76,7 @@ class QuickbooksQWCForm extends FormBase {
     ];
 
     $description = $this->t('The URL of your web service.  For internal development and testing only, you can specify localhost or a machine name in place of the domain name.');
-    $form['app_u_r_l'] = [
+    $form['container']['app_u_r_l'] = [
       '#type' => 'textfield',
       '#title' => $this->t('App URL'),
       '#description' => $secure
@@ -85,7 +90,7 @@ class QuickbooksQWCForm extends FormBase {
       '#required' => TRUE,
     ];
 
-    $form['app_support'] = [
+    $form['container']['app_support'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Support URL'),
       '#description' => $this->t('The support URL.  This can most likely stay unchanged, but if change is desired then the domain or machine name must match the App URL domain or machine name.'),
@@ -96,7 +101,7 @@ class QuickbooksQWCForm extends FormBase {
       '#required' => TRUE,
     ];
 
-    $form['user_name'] = [
+    $form['container']['user_name'] = [
       '#type' => 'select',
       '#title' => $this->t('Quickbooks User'),
       '#description' => $this-t("A user with specific permission to access the SOAP service calls on your site.  This list is populated by users with the 'access quickbooks soap service' permission."),
@@ -104,7 +109,7 @@ class QuickbooksQWCForm extends FormBase {
       '#required' => TRUE,
     ];
 
-    $form['file_i_d'] = [
+    $form['container']['file_i_d'] = [
       '#type' => 'textfield',
       '#title' => $this->t('File ID'),
       '#description' => $this->t('An ID assigned to your Quickbooks application.  This should be left alone, but if necessary can be replaced if you have a working GUID already.'),

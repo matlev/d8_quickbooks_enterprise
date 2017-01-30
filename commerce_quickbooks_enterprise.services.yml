@@ -5,7 +5,9 @@ services:
       - {name: 'event_subscriber'}
   commerce_quickbooks_enterprise.qbxml_parser:
     class: Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\QBXMLParser
+  commerce_quickbooks_enterprise.soap_session_manager:
+    class: Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapSessionManager
+    arguments: ['@database']
   commerce_quickbooks_enterprise.soap_service:
     class: Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapService
-    arguments:
-      - ['@user.auth', '@commerce_quickbooks_enterprise.qbxml_parser']
+    arguments: ['@user.auth', '@commerce_quickbooks_enterprise.qbxml_parser', '@commerce_quickbooks_enterprise.soap_session_manager']

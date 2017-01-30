@@ -8,6 +8,8 @@
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\commerce_quickbooks_enterprise\Event\UserEvent;
 use Drupal\commerce_quickbooks_enterprise\Event\UserEvents;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
 
 /**
  * Implements hook_help().
@@ -63,6 +65,34 @@ function commerce_quickbooks_enterprise_theme($existing, $type, $theme, $path) {
       'variables' => array('properties' => NULL),
     ),
   );
+}
+
+/**
+ * Implements hook_entity_base_field_info().
+ *
+ * @TODO: Does this need to move to hook_install?
+ *
+ * Attaches relevant quickbooks IDs to entities in Drupal for faster processing.
+ *
+ * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
+ */
+function commerce_quickbooks_enterprise_entity_base_field_info(EntityTypeInterface $entity_type) {
+  $types = ['user', 'commerce_order', 'commerce_product_variation'];
+  $entity_id = $entity_type->id();
+
+  if (in_array($entity_id, $types)) {
+    $fields['commerce_qbe_qbid'] = BaseFieldDefinition::create('text')
+      ->setLabel(t('Quickbooks List ID'))
+      ->setDescription(t('An ID stored in Quickbooks that references this entity.'));
+
+    if ($entity_id == 'commerce_order') {
+      $fields['commerce_qbe_edit_sequence'] = BaseFieldDefinition::create('text')
+        ->setLabel(t('Quickbooks Revision ID'))
+        ->setDescription(t('If this order exists on Quickbooks, in order to push updates Drupal must have the same revision ID as Quickbooks.'));
+    }
+
+    return $fields;
+  }
 }
 
 /**

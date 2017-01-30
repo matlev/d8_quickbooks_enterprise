@@ -1,5 +1,38 @@
 <?php
 
+function commerce_quickbooks_enterprise_schema() {
+  $schema['commerce_quickbooks_enterprise_soap_session'] = array(
+    'description' => 'The table for storing SOAP client sessions.',
+    'fields' => array(
+      'uuid' => array(
+        'description' => 'The hash of a UUID given to clients to identify themselves.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The ID of a valid Drupal user.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'stage' => array(
+        'description' => 'The most recent service call made by the client',
+        'type' => 'varchar',
+        'length' => 31,
+        'not null' => TRUE,
+        'default' => 'authorize',
+      ),
+    ),
+    'unique keys' => array(
+      'uuid' => array('uuid'),
+    ),
+    'primary key' => array ('uid'),
+  );
+
+  return $schema;
+}
+
 /**
  * Implements hook_install().
  *
@@ -24,6 +57,7 @@ function commerce_quickbooks_enterprise_install() {
   $user = \Drupal\user\Entity\User::create();
   $user->setPassword('quickbooks_user');
   $user->enforceIsNew();
+  $user->addrole($role->id());
   $user->setEmail('test@test.com');
   $user->setUsername('quickbooks_user');
   $user->activate();
@@ -36,6 +70,7 @@ function commerce_quickbooks_enterprise_install() {
   catch (\Drupal\Core\Entity\EntityStorageException $e) {
     drupal_set_message(t('A Quickbooks User account was unable to be created.  You will have to manually create a new user with the "Quickbooks User" role.'), 'error');
   }
+
 }
 
 /**

@@ -1,12 +1,11 @@
 <?php
 
 namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
+use Drupal\user\Entity\User;
 use Drupal\user\UserAuthInterface;
 
 /**
  * Handle SOAP requests and return a response.
- *
- * @TODO: Implement logging for each request.
  *
  * Class SoapService
  * @package Drupal\commerce_quickbooks_enterprise\SoapBundle\Services
@@ -28,6 +27,15 @@ class SoapService implements SoapServiceInterface {
   private $qbxmlParser;
 
   /**
+   * The session manager.
+   *
+   * Responsible for managing, validating and invalidating SOAP sessions.
+   *
+   * @var \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapSessionManager
+   */
+  private $session_manager;
+
+  /**
    * The current server version.
    *
    * @var string
@@ -41,22 +49,18 @@ class SoapService implements SoapServiceInterface {
    */
   protected $clientVersion;
 
-  /**
-   * The UID of the logged-in SOAP client.
-   *
-   * @var int
-   */
-  protected $soapUserID;
 
   /**
    * SoapService constructor.
    *
    * @param \Drupal\user\UserAuthInterface $userAuthInterface
    * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\QBXMLParser $parser
+   * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapSessionManager $sessionManager
    */
-  public function __construct(UserAuthInterface $userAuthInterface, QBXMLParser $parser) {
+  public function __construct(UserAuthInterface $userAuthInterface, QBXMLParser $parser, SoapSessionManager $sessionManager) {
     $this->userAuthInterface = $userAuthInterface;
     $this->qbxmlParser = $parser;
+    $this->session_manager = $sessionManager;
   }
 
   /**
@@ -69,33 +73,52 @@ class SoapService implements SoapServiceInterface {
    * @param $method
    *   The wsdl call being invoked.
    * @param $data
-   *   The SOAP request
+   *   The SOAP request object.
    *
-   * @return string
-   *   The xml string to return back to the client by the SOAP server.
+   * @return \stdClass
+   *   The response object expected by Quickbooks.
    */
   public function __call($method, $data) {
-    // @TODO: log the incoming SOAP call.
+    \Drupal::logger('commerce_qbe')->info("QB SOAP service [$method] called.  Incoming request: " . print_r($data, TRUE));
+    $public_services = ['clientVersion', 'serverVersion', 'authenticate'];
 
-    // The first call is always 'authenticate', which connects WebConnect to our
-    // site with a privileged QB SOAP user.  If we're not calling 'authenticate'
-    // then we need to make sure that the current user has the correct permissions.
-    if ($method != 'authenticate') {
-      if (!\Drupal::currentUser()->hasPermission('access quickbooks soap service')) {
-        // If the user doesn't have permission, return an empty response.
-        return $this->prepareResponse($method, $data);
-      }
-    }
+    $request = $this->prepareResponse($method, $data);
 
     $callback = "call_$method";
     $response = NULL;
 
+    // If the method being requested requires a validated user, do that now.
+    if (!in_array($method, $public_services)) {
+      // The request must have a ticket to proceed.
+      if (empty($request['ticket'])) {
+        return $request;
+      }
+
+      $valid = $this->session_manager
+        ->setUUID($request['ticket'])
+        ->validateSession($method);
+
+      // If the client has a valid ticket and request, log in now.
+      if ($valid) {
+        $user = User::load($this->session_manager->getUID());
+        user_login_finalize($user);
+
+        if (!$user->hasPermission('access quickbooks soap service')) {
+          \Drupal::logger('commerce_qbe')->warning('User logged in successfully but didn\'t have Quickbooks SOAP Service access permissions.');
+          return $request;
+        }
+      }
+      else {
+        \Drupal::logger('commerce_qbe')->error('The user had an invalid session token or made an invalid request.  Aborting communication...');
+        return $request;
+      }
+    }
+
     // If a valid method method is being called, parse the incoming request
     // and call the method with the parsed data passed in.
-    if (is_callable($callback)) {
+    if (is_callable([$this, $callback])) {
       // Prepare the response to the client.
-      $request = $this->prepareResponse($method, $data);
-      $response = $callback($request);
+      $response = $this->$callback($request);
     }
 
     return $response;
@@ -119,10 +142,8 @@ class SoapService implements SoapServiceInterface {
    *   }
    */
   private function prepareResponse($method_name, $data) {
-    $response = new \stdClass;
+    $response = $data[0];
     $response->$method_name = '';
-
-    simplexml_load_string($data);
 
     return $response;
   }
@@ -153,23 +174,25 @@ class SoapService implements SoapServiceInterface {
     $strPassword = $request->strPassword;
 
     // Initial "fail" response.
-    $result = array(session_id(), 'nvu');
+    $result = array('', 'nvu');
 
     // If the service isn't set for whatever reason we can't continue.
     if (!isset($this->userAuthInterface)) {
-      // @TODO: log "Unable to authenticate user" message.
+      \Drupal::logger('commerce_qbe')->error("User Auth service couldn't be initialized.");
     }
     else {
       $uid = $this->userAuthInterface->authenticate($strUserName, $strPassword);
 
       if ($uid === FALSE) {
-        // @TODO: log "Invalid login" message.
+        \Drupal::logger('commerce_qbe')->error("Invalid login credentials, aborting quickbooks SOAP service.");
       }
       else {
-        // @TODO: log "User $strUserName successfully authenticated" message.
+        \Drupal::logger('commerce_qbe')->info("Quickbooks user $strUserName successfully connected!  Commencing data exchange with client.");
 
-        $this->soapUserID = $uid;
-        $result = array($strUserName . "|" . $strPassword, '');
+        $uuid = \Drupal::service('uuid')->generate();
+        $this->session_manager->startSession($uuid, $uid);
+
+        $result = array($uuid, '');
       }
     }
 
