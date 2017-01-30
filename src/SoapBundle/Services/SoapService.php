@@ -1,6 +1,9 @@
 <?php
 
 namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
+
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\Query\QueryInterface;
 use Drupal\user\Entity\User;
 use Drupal\user\UserAuthInterface;
 
@@ -33,7 +36,21 @@ class SoapService implements SoapServiceInterface {
    *
    * @var \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapSessionManager
    */
-  private $session_manager;
+  private $sessionManager;
+
+  /**
+   * Entity Query service.
+   *
+   * @var \Drupal\Core\Entity\Query\QueryInterface
+   */
+  private $entityQuery;
+
+  /**
+   * Storage handler for QB Items.
+   *
+   * @var \Drupal\commerce_quickbooks_enterprise\QuickbooksItemEntityStorageInterface
+   */
+  private $qbItemStorage;
 
   /**
    * The current server version.
@@ -49,34 +66,56 @@ class SoapService implements SoapServiceInterface {
    */
   protected $clientVersion;
 
+  /**
+   * The default order in which to process exportable QB Items.
+   *
+   * @var array
+   */
+  protected $itemPriorities = [
+    'add_customer',
+    'add_inventory_product',
+    'add_non_inventory_product',
+    'add_invoice',
+    'mod_invoice',
+    'add_sales_receipt',
+    'add_payment',
+  ];
+
+  /**
+   * The list of possible statuses for an export Item.
+   *
+   * @var array
+   */
+  private $status = [
+    'CQBWC_PENDING' => 1,
+    'CQBWC_DONE' => 0,
+    'CQBWC_ERROR' => -1,
+  ];
 
   /**
    * SoapService constructor.
    *
+   * @param \Drupal\Core\Entity\Query\QueryInterface $entityQuery
    * @param \Drupal\user\UserAuthInterface $userAuthInterface
    * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\QBXMLParser $parser
    * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapSessionManager $sessionManager
    */
-  public function __construct(UserAuthInterface $userAuthInterface, QBXMLParser $parser, SoapSessionManager $sessionManager) {
+  public function __construct(
+    EntityTypeManagerInterface $entity_type_manager,
+    QueryInterface $entityQuery,
+    UserAuthInterface $userAuthInterface,
+    QBXMLParser $parser,
+    SoapSessionManager $sessionManager
+  ) {
+    $this->qbItemStorage = $entity_type_manager->getStorage('commerce_qbe_qbitem');
+    $this->entityQuery = $entityQuery;
     $this->userAuthInterface = $userAuthInterface;
     $this->qbxmlParser = $parser;
-    $this->session_manager = $sessionManager;
+    $this->sessionManager = $sessionManager;
   }
 
   /**
-   * Builds a response to WebConnect out of the incoming raw request.
-   *
-   * A response to Quickbooks is expected to be formatted as a stdClass object
-   * with a property named [methodName]Result that contains an array/string
-   * formatted to the QBWC specs.
-   *
-   * @param $method
-   *   The wsdl call being invoked.
-   * @param $data
-   *   The SOAP request object.
-   *
-   * @return \stdClass
-   *   The response object expected by Quickbooks.
+   * {@inheritDoc}
    */
   public function __call($method, $data) {
     \Drupal::logger('commerce_qbe')->info("QB SOAP service [$method] called.  Incoming request: " . print_r($data, TRUE));
@@ -94,13 +133,13 @@ class SoapService implements SoapServiceInterface {
         return $request;
       }
 
-      $valid = $this->session_manager
+      $valid = $this->sessionManager
         ->setUUID($request['ticket'])
         ->validateSession($method);
 
       // If the client has a valid ticket and request, log in now.
       if ($valid) {
-        $user = User::load($this->session_manager->getUID());
+        $user = User::load($this->sessionManager->getUID());
         user_login_finalize($user);
 
         if (!$user->hasPermission('access quickbooks soap service')) {
@@ -128,7 +167,7 @@ class SoapService implements SoapServiceInterface {
    * Builds the stdClass object required by a service response handler.
    *
    * @param string $method_name
-   *   The Quikcbooks method being called.
+   *   The Quickbooks method being called.
    * @param string $data
    *   The raw incoming soap request.
    *
@@ -146,6 +185,18 @@ class SoapService implements SoapServiceInterface {
     $response->$method_name = '';
 
     return $response;
+  }
+
+  /**
+   * Allows others to change the priority of Items in the queue.
+   *
+   * $prioirites must be an unkeyed array, where values correspond to the
+   * values allowed in the commerce_qbe_qbitem.item_type field.
+   *
+   * @param array $priorities
+   */
+  public function changeItemPriorities(array $priorities) {
+    $this->itemPriorities = $priorities;
   }
 
   /**
@@ -190,7 +241,7 @@ class SoapService implements SoapServiceInterface {
         \Drupal::logger('commerce_qbe')->info("Quickbooks user $strUserName successfully connected!  Commencing data exchange with client.");
 
         $uuid = \Drupal::service('uuid')->generate();
-        $this->session_manager->startSession($uuid, $uid);
+        $this->sessionManager->startSession($uuid, $uid);
 
         $result = array($uuid, '');
       }
@@ -204,7 +255,16 @@ class SoapService implements SoapServiceInterface {
    * {@inheritDoc}
    */
   public function call_sendRequestXML(\stdClass $request) {
-    // TODO: Implement sendRequestXML() method.
+    $qb_item = $this->qbItemStorage->loadNextPriorityItem($this->itemPriorities);
+
+    if (!empty($qb_item)) {
+      
+    }
+    else {
+      \Drupal::logger('commerce_qbe')->info('Nothing to export, jobs finished.');
+    }
+
+    return $request;
   }
 
   /**
@@ -218,13 +278,25 @@ class SoapService implements SoapServiceInterface {
    * {@inheritDoc}
    */
   public function call_getLastError(\stdClass $request) {
-    // TODO: Implement getLastError() method.
+    $query = $this->entityQuery->get('commerce_qbe_qbitem');
+    $query->condition('status', $this->status['CQBWC_PENDING'], '=');
+    $query->count();
+
+    $pending_items = $query->execute();
+
+    if ($pending_items == 0) {
+      $request->getLastErrorResult = 'No jobs remaining';
+    }
+
+    return $request;
   }
 
   /**
    * {@inheritDoc}
    */
   public function call_closeConnection(\stdClass $request) {
-    // TODO: Implement closeConnection() method.
+    $this->sessionManager->closeSession();
+    $request->closeConnectionResult = 'OK';
+    return $request;
   }
 }

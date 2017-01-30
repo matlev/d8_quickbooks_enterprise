@@ -25,6 +25,7 @@ define('QB_EXPORT_FAIL', 2);
  *   id = "commerce_qbe_qbitem",
  *   label = @Translation("Quickbooks Item"),
  *   handlers = {
+ *   "storage" = "Drupal\commerce_quickbooks_enterprise\QuickbooksItemEntityStorage",
  *   },
  *   admin_permission = "access content",
  *   base_table = "commerce_quickbooks_enterprise_qbitem",

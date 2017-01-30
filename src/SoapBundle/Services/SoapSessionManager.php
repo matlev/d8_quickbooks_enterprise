@@ -56,7 +56,7 @@ class SoapSessionManager {
     'serverVersion' => ['clientVersion'],
     'clientVersion' => ['authenticate'],
     'authenticate' => ['sendRequestXML', 'closeConnection'],
-    'sendRequestXML' => ['getLastError', 'sendRequestXML', 'receiveResponseXML'],
+    'sendRequestXML' => ['getLastError', 'receiveResponseXML'],
     'receiveResponseXML' => ['getLastError', 'sendRequestXML', 'closeConnection'],
     'getLastError' => ['closeConnection', 'sendRequestXML'],
     'closeConnection' => [],
@@ -142,6 +142,22 @@ class SoapSessionManager {
     $this->updateSession($request);
 
     return $this->isValid;
+  }
+
+  /**
+   * Removes the current session from the quickbooks session table.
+   */
+  public function closeSession() {
+    // Can't do anything if we don't have a UUID.
+    if (empty($this->uuid)) {
+      return;
+    }
+
+    $uuid = md5($this->uuid);
+
+    $query = $this->databaseService->delete($this->storageTable);
+    $query->condition('uuid', $uuid);
+    $query->execute();
   }
 
   /**
