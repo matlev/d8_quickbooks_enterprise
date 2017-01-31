@@ -6,6 +6,7 @@
 
 namespace Drupal\commerce_quickbooks_enterprise\EventSubscriber;
 
+use Drupal\commerce_quickbooks_enterprise\Entity\QBItem;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\state_machine\Event\WorkflowTransitionEvent;
 use Drupal\commerce_product\Event\ProductEvents;
@@ -14,6 +15,8 @@ use Drupal\commerce_product\Event\ProductVariationEvent;
 use Drupal\commerce_quickbooks_enterprise\Event\UserEvents;
 use Drupal\commerce_quickbooks_enterprise\Event\UserEvent;
 use Drupal\Core\Entity\ContentEntityInterface;
+
+define('CQBWC_PENDING', 1);
 
 /**
  * Event Subscriber QuickbooksEventSubscriber
@@ -53,7 +56,13 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
     $order = $event->getEntity();
 
+    // Depending on where the order came from and if it's been paid or not,
+    // we may be exporting an invoice, sales receipt, or a payment.
+    // @TODO: Fill out order checking logic.
 
+    // We need to cycle through the order and add any applicable products or
+    // customers to the queue if they don't have a Quickbooks Reference ID.
+    // @TODO: Parse order components.
   }
 
   /**
@@ -68,7 +77,7 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     /** @var \Drupal\commerce_product\Entity\ProductInterface $product */
     $product = $event->getProduct();
 
-
+    //\Drupal::logger('commerce_qbe_events')->info(print_r($product, TRUE));
   }
 
   /**
@@ -80,7 +89,23 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     /** @var \Drupal\commerce_product\Entity\ProductVariationInterface $variation */
     $variation = $event->getProductVariation();
 
+    if (empty($variation->getSku())) {
+      return;
+    }
 
+    \Drupal::logger('commerce_qbe_events')->info('Adding Product Variation to export queue...');
+    if ($variation->hasField('commerce_qbe_qbid')) {
+      if (empty($variation->commerce_qbe_qbid->value)) {
+        $qb_item = QBItem::create();
+        $qb_item->setItemType("add_inventory_product");
+        $qb_item->setStatus(CQBWC_PENDING);
+        $qb_item->setExportableEntity($variation);
+        $qb_item->setCreatedTime(REQUEST_TIME);
+        $qb_item->save();
+
+        \Drupal::logger('commerce_qbe_events')->info('Added Product Variation to export queue!');
+      }
+    }
   }
 
   /**
@@ -96,15 +121,14 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     /** @var \Drupal\Core\Entity\EntityInterface $user */
     $user = $event->getUser();
 
-
+    if (empty($user->commerce_qbe_qbid)) {
+      $qb_item = QBItem::create();
+      $qb_item->setItemType("add_customer");
+      $qb_item->setStatus(CQBWC_PENDING);
+      $qb_item->setExportableEntity($user);
+      $qb_item->setCreatedTime(REQUEST_TIME);
+      $qb_item->save();
+    }
   }
 
-  /**
-   * Breaks down an entity into Quickbooks components, saving them in the Queue.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   */
-  private function saveDataToQueue(ContentEntityInterface $entity) {
-
-  }
 }

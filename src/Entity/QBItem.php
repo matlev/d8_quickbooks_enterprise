@@ -25,7 +25,7 @@ define('QB_EXPORT_FAIL', 2);
  *   id = "commerce_qbe_qbitem",
  *   label = @Translation("Quickbooks Item"),
  *   handlers = {
- *   "storage" = "Drupal\commerce_quickbooks_enterprise\QuickbooksItemEntityStorage",
+ *     "storage" = "Drupal\commerce_quickbooks_enterprise\QuickbooksItemEntityStorage",
  *   },
  *   admin_permission = "access content",
  *   base_table = "commerce_quickbooks_enterprise_qbitem",
@@ -45,6 +45,11 @@ class QBItem extends ContentEntityBase implements QBItemInterface {
    */
   public function getItemType() {
     return $this->get('item_type')->value;
+  }
+
+  public function setItemType($type) {
+    $this->set('item_type', $type);
+    return $this;
   }
 
   /**

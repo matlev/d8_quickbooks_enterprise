@@ -2,8 +2,10 @@
 
 namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
 
+use Drupal\commerce_quickbooks_enterprise\Entity\QBItem;
+use Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Entity\Query\QueryInterface;
+use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\user\Entity\User;
 use Drupal\user\UserAuthInterface;
 
@@ -27,7 +29,7 @@ class SoapService implements SoapServiceInterface {
    *
    * @var \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\QBXMLParser
    */
-  private $qbxmlParser;
+  protected $qbxmlParser;
 
   /**
    * The session manager.
@@ -36,7 +38,12 @@ class SoapService implements SoapServiceInterface {
    *
    * @var \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapSessionManager
    */
-  private $sessionManager;
+  protected $sessionManager;
+
+  /**
+   * @var \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\ValidatorInterface
+   */
+  protected $validator;
 
   /**
    * Entity Query service.
@@ -95,23 +102,27 @@ class SoapService implements SoapServiceInterface {
   /**
    * SoapService constructor.
    *
-   * @param \Drupal\Core\Entity\Query\QueryInterface $entityQuery
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   * @param \Drupal\Core\Entity\Query\QueryFactory $entityQuery
    * @param \Drupal\user\UserAuthInterface $userAuthInterface
    * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\QBXMLParser $parser
    * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapSessionManager $sessionManager
+   * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\ValidatorInterface $validator
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
-    QueryInterface $entityQuery,
+    QueryFactory $entityQuery,
     UserAuthInterface $userAuthInterface,
     QBXMLParser $parser,
-    SoapSessionManager $sessionManager
+    SoapSessionManager $sessionManager,
+    ValidatorInterface $validator
   ) {
     $this->qbItemStorage = $entity_type_manager->getStorage('commerce_qbe_qbitem');
     $this->entityQuery = $entityQuery;
     $this->userAuthInterface = $userAuthInterface;
     $this->qbxmlParser = $parser;
     $this->sessionManager = $sessionManager;
+    $this->validator = $validator;
   }
 
   /**
@@ -129,12 +140,12 @@ class SoapService implements SoapServiceInterface {
     // If the method being requested requires a validated user, do that now.
     if (!in_array($method, $public_services)) {
       // The request must have a ticket to proceed.
-      if (empty($request['ticket'])) {
+      if (empty($request->ticket)) {
         return $request;
       }
 
       $valid = $this->sessionManager
-        ->setUUID($request['ticket'])
+        ->setUUID($request->ticket)
         ->validateSession($method);
 
       // If the client has a valid ticket and request, log in now.
@@ -187,17 +198,10 @@ class SoapService implements SoapServiceInterface {
     return $response;
   }
 
-  /**
-   * Allows others to change the priority of Items in the queue.
-   *
-   * $prioirites must be an unkeyed array, where values correspond to the
-   * values allowed in the commerce_qbe_qbitem.item_type field.
-   *
-   * @param array $priorities
-   */
-  public function changeItemPriorities(array $priorities) {
-    $this->itemPriorities = $priorities;
-  }
+
+  /****************************************************
+   * The WSDL defined SOAP service calls              *
+   ****************************************************/
 
   /**
    * {@inheritDoc}
@@ -255,14 +259,68 @@ class SoapService implements SoapServiceInterface {
    * {@inheritDoc}
    */
   public function call_sendRequestXML(\stdClass $request) {
-    $qb_item = $this->qbItemStorage->loadNextPriorityItem($this->itemPriorities);
+    \Drupal::logger('commerce_qbe')->info("Request received, searching for exports in the Queue...");
 
-    if (!empty($qb_item)) {
-      
+    $not_ready = TRUE;
+    $item_type = '';
+
+    // Go through the queue looking for a valid item.
+    do {
+      $qb_item_id = $this->qbItemStorage->loadNextPriorityItem($this->itemPriorities);
+      $qb_item = QBItem::load($qb_item_id);
+
+      // Validate the item data now to ensure it's exportable.
+      if (!empty($qb_item)) {
+        $item_type = $qb_item->getItemType();
+        $valid = $this->validator->validate($item_type, $qb_item);
+        if ($valid) {
+          // We're ready to move on and prepare the template.
+          $not_ready = FALSE;
+        }
+        else {
+          // Remove any invalid items and try again.
+          $qb_item->delete();
+        }
+      }
+      else {
+        // If there are no more items, then we don't have any work to do.
+        \Drupal::logger('commerce_qbe')->info("No items to export, job done.");
+        return $request;
+      }
+    } while ($not_ready);
+
+    \Drupal::logger('commerce_qbe')->info("Exportable item found of type [$item_type]!  Preparing for export...");
+
+    // Now prepare the object we need to pass to templates to build valid XML.
+    $properties = new \stdClass();
+    switch ($item_type) {
+      case 'add_inventory_product':
+      case 'add_non_inventory_prodcut':
+        $this->prepare_product_export($qb_item, $properties);
+        break;
+
+      case 'add_customer':
+        $this->prepare_customer_export($qb_item, $properties);
+        break;
+
+      case 'add_invoice':
+      case 'mod_invoice':
+      case 'add_sales_receipt':
+        $this->prepare_order_export($qb_item, $properties);
+        break;
+
+      case 'add_payment':
+        $this->prepare_payment_export($qb_item, $properties);
+        break;
+
+      default:
+        \Drupal::logger('commerce_qbe')->error("Unable to prepare data for export.  No method found for [$item_type]");
+        return $request;
     }
-    else {
-      \Drupal::logger('commerce_qbe')->info('Nothing to export, jobs finished.');
-    }
+
+    // Finally, build the XML response for the request and return it.
+    $this->qbxmlParser->buildResponseXML($item_type, $properties);
+    $request->sendRequestXMLResult = $this->qbxmlParser->getResponseXML();
 
     return $request;
   }
@@ -298,5 +356,105 @@ class SoapService implements SoapServiceInterface {
     $this->sessionManager->closeSession();
     $request->closeConnectionResult = 'OK';
     return $request;
+  }
+
+
+  /****************************************************
+   * Export entity processing helpers                 *
+   ****************************************************/
+
+  /**
+   * Parse Product entities into a template-ready object.
+   *
+   * @param \stdClass $properties
+   *   The properties object for product templates.
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   *   The current export.
+   */
+  private function prepare_product_export(QBItemInterface $qb_item, \stdClass &$properties) {
+    $product = $qb_item->getExportableEntity();
+
+    $properties->product_id = $product->id();
+    $properties->sku = $product->getSku();
+    $properties->title = $product->getTitle();
+    $properties->price = $product->getPrice();
+    $properties->income = '';
+    $properties->cogs = '';
+    $properties->assets = '';
+  }
+
+  /**
+   * Parse User entities into a template-ready object.
+   *
+   * @param \stdClass $properties
+   *   The properties object for product templates.
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   *   The current export.
+   */
+  private function prepare_customer_export(QBItemInterface $qb_item, \stdClass &$properties) {
+    $customer = $qb_item->getExportableEntity();
+    \Drupal::logger('commerce_qbe')->info(print_r($customer, TRUE));
+  }
+
+  /**
+   * Parse Order entities into a template-ready object.
+   *
+   * @param \stdClass $properties
+   *   The properties object for product templates.
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   *   The current export.
+   */
+  private function prepare_order_export(QBItemInterface $qb_item, \stdClass &$properties) {
+
+  }
+
+  /**
+   * Parse Order entities into a template-ready object.
+   *
+   * @param \stdClass $properties
+   *   The properties object for product templates.
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   *   The current export.
+   */
+  private function prepare_payment_export(QBItemInterface $qb_item, \stdClass &$properties) {
+
+  }
+
+  /****************************************************
+   * Alter hook exposed functions for plugin swapping *
+   ****************************************************/
+
+  /**
+   * Allow modules to alter the QBXML Parser service.
+   *
+   * @param Object $service
+   * @return $this
+   */
+  public function setQBXMLParserService($service) {
+    $this->qbxmlParser = $service;
+    return $this;
+  }
+
+  /**
+   * Allow modules to alter the SOAP Session Manager service.
+   *
+   * @param Object $service
+   * @return $this
+   */
+  public function setSoapSessionManagerService($service) {
+    $this->sessionManager = $service;
+    return $this;
+  }
+
+  /**
+   * Allows others to change the priority of Items in the queue.
+   *
+   * $prioirites must be an unkeyed array, where values correspond to the
+   * values allowed in the commerce_qbe_qbitem.item_type field.
+   *
+   * @param array $priorities
+   */
+  public function setItemPriorities(array $priorities) {
+    $this->itemPriorities = $priorities;
   }
 }
