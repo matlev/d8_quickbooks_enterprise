@@ -14,7 +14,7 @@ interface SoapServiceInterface {
    * Process the incoming request and call the appropriate service method.
    *
    * This magic function is responsible for processing the incoming SOAP request
-   * and doing user session validation if required for the incoming service call.
+   * and doing user session validation if required forthe incoming service call.
    *
    * A response to Quickbooks is expected to be formatted as a stdClass object
    * with a property named [methodName]Result that contains an array/string

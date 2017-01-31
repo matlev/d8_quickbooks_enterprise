@@ -21,7 +21,7 @@ function commerce_quickbooks_enterprise_schema() {
         'type' => 'varchar',
         'length' => 31,
         'not null' => TRUE,
-        'default' => 'authorize',
+        'default' => 'authenticate',
       ),
     ),
     'unique keys' => array(

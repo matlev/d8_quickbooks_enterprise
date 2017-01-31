@@ -19,11 +19,6 @@ class QBXMLParser {
   protected $responseXML;
 
   /**
-   * QBXMLParser constructor.
-   */
-  public function __construct() {}
-
-  /**
    * Set the SOAP request XML.
    *
    * @param $xml string
@@ -85,7 +80,9 @@ class QBXMLParser {
    */
   public function buildResponseXML($type, \stdClass $properties) {
     // Retrieve the valid types of QB Items we're allowed to export
-    $bundle_fields = \Drupal::getContainer()->get('entity_field.manager')->getFieldDefinitions("commerce_quickbooks_enterprise_qbitem");
+    $bundle_fields = \Drupal::getContainer()
+      ->get('entity_field.manager')
+      ->getFieldDefinitions("commerce_quickbooks_enterprise_qbitem");
     $field_definition = $bundle_fields['item_type'];
     $valid_types = $field_definition->getSetting('allowed_values');
 
