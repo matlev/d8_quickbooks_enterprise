@@ -14,6 +14,7 @@ class QuickbooksItemEntityStorage extends SqlContentEntityStorage implements Qui
     $result = [];
 
     if (empty($priorities)) {
+      \Drupal::logger('commerce_qbe_storage')->info('no priority list given');
       $result = $this->loadNextPendingItem();
     }
     else {

@@ -6,6 +6,7 @@ use Drupal\commerce_quickbooks_enterprise\Entity\QBItem;
 use Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\user\Entity\User;
 use Drupal\user\UserAuthInterface;
 
@@ -60,6 +61,13 @@ class SoapService implements SoapServiceInterface {
   private $qbItemStorage;
 
   /**
+   * Module handler for alter hooks.
+   *
+   * @var \Drupal\Core\Extension\ModuleHandlerInterface
+   */
+  private $moduleHandler;
+
+  /**
    * The current server version.
    *
    * @var string
@@ -108,6 +116,7 @@ class SoapService implements SoapServiceInterface {
    * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\QBXMLParser $parser
    * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\SoapSessionManager $sessionManager
    * @param \Drupal\commerce_quickbooks_enterprise\SoapBundle\Services\ValidatorInterface $validator
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
@@ -115,7 +124,8 @@ class SoapService implements SoapServiceInterface {
     UserAuthInterface $userAuthInterface,
     QBXMLParser $parser,
     SoapSessionManager $sessionManager,
-    ValidatorInterface $validator
+    ValidatorInterface $validator,
+    ModuleHandlerInterface $moduleHandler
   ) {
     $this->qbItemStorage = $entity_type_manager->getStorage('commerce_qbe_qbitem');
     $this->entityQuery = $entityQuery;
@@ -123,6 +133,7 @@ class SoapService implements SoapServiceInterface {
     $this->qbxmlParser = $parser;
     $this->sessionManager = $sessionManager;
     $this->validator = $validator;
+    $this->moduleHandler = $moduleHandler;
   }
 
   /**
@@ -318,9 +329,18 @@ class SoapService implements SoapServiceInterface {
         return $request;
     }
 
-    // Finally, build the XML response for the request and return it.
+    // Allow other modules to alter the properties if necessary
+    $this->moduleHandler->alter('commerce_quickbooks_enterprise_rxml_properties', $properties, $qb_item);
+
+    // Build the XML response for the request and return it.
     $this->qbxmlParser->buildResponseXML($item_type, $properties);
-    $request->sendRequestXMLResult = $this->qbxmlParser->getResponseXML();
+    $qbxml = $this->qbxmlParser->getResponseXML();
+
+    // Finally, update the export date and status of the item and return it.
+    $status = empty($qbxml) ? $this->status['CQBWC_ERROR'] : $this->status['CQBWC_DONE'];
+    $qb_item->setStatus($status);
+    $qb_item->setExportTime(date("c"));
+    $qb_item->save();
 
     return $request;
   }
@@ -372,15 +392,16 @@ class SoapService implements SoapServiceInterface {
    *   The current export.
    */
   private function prepare_product_export(QBItemInterface $qb_item, \stdClass &$properties) {
+    $config = \Drupal::config('commerce_quickbooks_enterprise.QuickbooksAdmin');
     $product = $qb_item->getExportableEntity();
 
     $properties->product_id = $product->id();
     $properties->sku = $product->getSku();
     $properties->title = $product->getTitle();
     $properties->price = $product->getPrice();
-    $properties->income = '';
-    $properties->cogs = '';
-    $properties->assets = '';
+    $properties->income = $config->get('income');
+    $properties->cogs = $config->get('cogs');
+    $properties->assets = $config->get('assets');
   }
 
   /**
