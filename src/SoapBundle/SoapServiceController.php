@@ -21,7 +21,9 @@ class SoapServiceController extends ControllerBase {
    */
   protected $logger;
 
-
+  /**
+   * @var \Drupal\Core\Extension\ModuleHandlerInterface
+   */
   protected $moduleHandler;
 
   /**

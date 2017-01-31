@@ -13,7 +13,7 @@ use Drupal\Core\Field\BaseFieldDefinition;
  */
 define('QB_EXPORT_PENDING', 0);
 define('QB_EXPORT_SUCCESS', 1);
-define('QB_EXPORT_FAIL', 2);
+define('QB_EXPORT_FAIL', -1);
 
 /**
  * Defines the commerceQuickbooksEnterpriseItem class.
