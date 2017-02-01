@@ -12,11 +12,25 @@ class QBXMLParser {
   public $requestXML;
 
   /**
-   * The QBXML string to return as a response to WebConnect
+   * The QBXML string to return as a response to WebConnect.
    *
    * @var string
    */
   protected $responseXML;
+
+  /**
+   * The parsed XML.
+   *
+   * @var \SimpleXMLElement
+   */
+  protected $simpleXMLObject;
+
+  /**
+   * An array of errors returned in a Quickbooks response.
+   *
+   * @var array
+   */
+  protected $errors;
 
   /**
    * Set the SOAP request XML.
@@ -49,17 +63,16 @@ class QBXMLParser {
    * @param null $xml
    *   An optional XML string.
    *
-   * @return \stdClass | boolean
-   *   Returns a stdClass object, or FALSE if the XML was unsuccessfully parsed.
+   * @return \SimpleXMLElement
+   *   Returns a SimpleXMLElement object
    */
-  public function getXMLAsObject($xml = null) {
+  public function getSimpleXMLObject($xml = null) {
     $xml = $xml || $this->requestXML;
+    $parsed = new \SimpleXMLElement($xml);
 
-    $xml_object = new \stdClass;
+    $this->simpleXMLObject = $parsed;
 
-    // Convert to object
-
-    return $xml_object;
+    return $parsed;
   }
 
   /**
@@ -110,11 +123,52 @@ class QBXMLParser {
   }
 
   /**
+   * Parse out the error messages returned from Quickbooks, if any.
+   */
+  public function parseQuickbooksErrors() {
+    if (empty($this->requestXML)) {
+      return;
+    }
+
+    // Parse the xml if it hasn't been done so already.
+    if (empty($this->simpleXMLObject)) {
+      $this->getSimpleXMLObject();
+    }
+
+    if ($this->simpleXMLObject instanceof \SimpleXMLElement) {
+      $errors = [];
+      $response_elements = $this->simpleXMLObject->QBXMLMsgsRs->children();
+
+      foreach ($response_elements as $name => $element) {
+        $attributes = $element->attributes();
+
+        if (isset($attributes->statusSeverity) && isset($attributes->statusMessage) && $attributes->statusSeverity == 'Error') {
+          $errors[] = array(
+            "statusCode" => (string) $attributes->statusCode,
+            "statusMessage" => (string) $attributes->statusMessage
+          );
+        }
+      }
+
+      $this->errors = $errors;
+    }
+  }
+
+  /**
    * Get the XML response for WebConnect.
    *
    * @return string
    */
   public function getResponseXML() {
     return $this->responseXML;
+  }
+
+  /**
+   * Get the list of errors parsed from a Quickbooks response.
+   *
+   * @return array
+   */
+  public function getErrorList() {
+    return $this->errors;
   }
 }
