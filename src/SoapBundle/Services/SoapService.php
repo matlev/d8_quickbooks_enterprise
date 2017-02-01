@@ -268,6 +268,11 @@ class SoapService implements SoapServiceInterface {
 
   /**
    * {@inheritDoc}
+   *
+   * @TODO: Break out QBItem lookup loop and export preparation block into their
+   *   own function.
+   * @TODO: Don't delete entities on validation failure or export failure,
+   *   set to FAIL status instead and move on.
    */
   public function call_sendRequestXML(\stdClass $request) {
     \Drupal::logger('commerce_qbe')->info("Request received, searching for exports in the Queue...");
@@ -336,20 +341,76 @@ class SoapService implements SoapServiceInterface {
     $this->qbxmlParser->buildResponseXML($item_type, $properties);
     $qbxml = $this->qbxmlParser->getResponseXML();
 
-    // Finally, update the export date and status of the item and return it.
-    $status = empty($qbxml) ? $this->status['CQBWC_ERROR'] : $this->status['CQBWC_DONE'];
-    $qb_item->setStatus($status);
-    $qb_item->setExportTime(date("c"));
-    $qb_item->save();
+    // If we failed, mark the current Item as a failure and try the next Item.
+    if (empty($qbxml)) {
+      $qb_item->setStatus($this->status['CQBWC_ERROR']);
+      $qb_item->setExportTime(date("c"));
+      $qb_item->save();
 
-    return $request;
+      return $this->call_sendRequestXML($request);
+    }
+    else {
+      $qb_item->setExportTime(date("c"));
+      $qb_item->save();
+
+      $request->sendRequestXMLResult = $qbxml;
+      return $request;
+    }
   }
 
   /**
    * {@inheritDoc}
    */
   public function call_receiveResponseXML(\stdClass $request) {
-    // TODO: Implement receiveResponseXML() method.
+    $status = $this->status['CQBWC_DONE'];
+    $retry = FALSE;
+
+    $qb_item_id = $this->qbItemStorage->loadMostRecentExport();
+    $qb_item = QBItem::load($qb_item_id);
+
+    if (!empty($qb_item)) {
+      // Parse any errors if we have them to decide our next action.
+      if (!empty($request->response)) {
+        $this->qbxmlParser->setRequestXML($request->response);
+        $this->qbxmlParser->parseQuickbooksErrors();
+        $errors = $this->qbxmlParser->getErrorList();
+      }
+      else {
+        $errors = [
+          "statusCode" => $request->hresult,
+          "statusMessage" => $request->message,
+        ];
+      }
+
+      foreach ($errors as $error) {
+        $error_msg = t("Response error statusCode:\nstatusMessage\n", $error);
+
+        \Drupal::logger('commerce_qbe_errors')->error(nl2br($error_msg));
+
+        // Ignore statusCode 3100 (already exists).
+        if ($error['statusCode'] == "3100") {
+          continue;
+        }
+
+        // 3180 is a temporary error with no clear reason. Just retry it.
+        if ($error['statusCode'] == "3180") {
+          $retry = TRUE;
+        }
+
+        $status = $this->status['CQBWC_ERROR'];
+      }
+
+      if (!$retry) {
+        $qb_item->setStatus($status);
+        $qb_item->save();
+      }
+
+    }
+    else {
+      $request->receiveResponseXMLResult = 100;
+    }
+
+    return $request;
   }
 
   /**
