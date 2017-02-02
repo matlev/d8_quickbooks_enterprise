@@ -2,7 +2,7 @@ commerce_quickbooks_enterprise.quickbooks_admin_form:
   title: 'Quickbooks Webconnect Settings'
   route_name: commerce_quickbooks_enterprise.quickbooks_admin_form
   description: 'Commerce Quickbooks webconnect settings form'
-  parent: system.admin_config_system
+  parent: commerce.configuration
   weight: 99
 
 commerce_quickbooks_enterprise.quickbooks_qwc_form:

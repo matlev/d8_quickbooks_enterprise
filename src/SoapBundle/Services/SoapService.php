@@ -185,6 +185,11 @@ class SoapService implements SoapServiceInterface {
     return $response;
   }
 
+
+  /****************************************************
+   * Private helper functions                         *
+   ****************************************************/
+
   /**
    * Builds the stdClass object required by a service response handler.
    *
@@ -207,6 +212,18 @@ class SoapService implements SoapServiceInterface {
     $response->$method_name = '';
 
     return $response;
+  }
+
+  /**
+   * Calculate the completion progress of the current SOAP session.
+   *
+   * @return int
+   */
+  private function getCompletionProgress() {
+    $done = count($this->qbItemStorage->loadAllDoneItems());
+    $todo = count($this->qbItemStorage->loadAllPendingItems());
+
+    return (int) (100 * ($done/($done + $todo)));
   }
 
 
@@ -405,6 +422,7 @@ class SoapService implements SoapServiceInterface {
         $qb_item->save();
       }
 
+      $request->receiveResponseXMLResult = $this->getCompletionProgress();
     }
     else {
       $request->receiveResponseXMLResult = 100;
