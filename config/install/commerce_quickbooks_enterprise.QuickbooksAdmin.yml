@@ -1,33 +1,23 @@
 commerce_quickbooks_enterprise:
-  main_income_account: "SALES"
-  cogs_account: "COGS Purchases"
-  assets_account: "Provide the name of the Assets account for exported products.INVENTORY"
-  type_of_item_to_create_in_quickb: "Inventory"
-  shipping_service: "Shipping"
-  shipping_service_description: "Shipping"
-  log_file_settings:
-    - 1
-    - 1
-  path_to_log_file: "sites/default/files/commerce_qb_webconnect"
-  qb_pending_export:
-    - 1
-  completed: "1"
-  canceled: "0"
-  checkout:
-    - 1
-  cart: "0"
-  payment_status_export_trigger:
-    - 1
-    - 0[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D
-  allow_payment_hook_exports: "1"
-  allow_payment_export_without_inv: "0"
   exportables:
     - 1
     - 1
+    - 0
     - 1
-    - 1
-    - 1
-  order_export_type: "0"
+    - 0
+    - 0
+    - 0
+  retry_exports: 1
+  main_income_account: "Sales"
+  cogs_account: "COGS Purchases"
+  assets_account: "Product Assets"
+  shipping_service: "Shipping"
+  shipping_service_description: "Shipping"
   quickbooks_invoice_number_prefix: "o"
   quickbooks_payment_reference_num: "op"
+  log_file_settings:
+    - 1
+    - 0
+    - 1
+  path_to_log_file: "sites/default/files/commerce_qb_webconnect"
   qwc_owner_id: ""

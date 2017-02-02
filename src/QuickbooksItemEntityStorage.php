@@ -21,9 +21,10 @@ class QuickbooksItemEntityStorage extends SqlContentEntityStorage implements Qui
       // Loop through each priority until we get an Item
       foreach ($priorities as $priority) {
         $query = $this->getQuery();
-        $query->condition('status', 1);
-        $query->condition('item_type', $priority);
-        $result = $query->execute();
+        $result = $query
+          ->condition('status', 1)
+          ->condition('item_type', $priority)
+          ->execute();
 
         if (!empty($result)) {
           break;
@@ -39,15 +40,52 @@ class QuickbooksItemEntityStorage extends SqlContentEntityStorage implements Qui
    */
   public function loadNextPendingItem() {
     $query = $this->getQuery();
-    $query->condition('status', 1);
-    $result = $query->execute();
+    $result = $query
+      ->condition('status', 1)
+      ->execute();
 
-    if (empty($result)) {
-      return [];
-    }
-    else {
-      $items = $this->loadMultiple($result);
-      return reset($items);
-    }
+    return reset($result);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function loadMostRecentExport() {
+    $query = $this->getQuery();
+    $result = $query
+      ->condition('status', 1)
+      ->exists('exported')
+      ->sort('exported', 'DESC')
+      ->execute();
+
+    return reset($result);
+  }
+
+  /**
+   * Get all pending exports.
+   *
+   * @return array
+   */
+  public function loadAllPendingItems() {
+    $query = $this->getQuery();
+    $result = $query
+      ->condition('status', 1)
+      ->execute();
+
+    return $result;
+  }
+
+  /**
+   * Get all completed exports.
+   *
+   * @return array
+   */
+  public function loadAllDoneItems() {
+    $query = $this->getQuery();
+    $result = $query
+      ->condition('status', 0)
+      ->execute();
+
+    return $result;
   }
 }

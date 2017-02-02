@@ -214,4 +214,5 @@ class SoapSessionManager {
   public function getUID() {
     return $this->uid;
   }
+
 }

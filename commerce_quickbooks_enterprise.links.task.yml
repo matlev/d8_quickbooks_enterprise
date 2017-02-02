@@ -1,0 +1,9 @@
+commerce_quickbooks_enterprise.quickbooks_admin_form:
+  route_name: commerce_quickbooks_enterprise.quickbooks_admin_form
+  base_route: commerce_quickbooks_enterprise.quickbooks_admin_form
+  title: 'Configuration'
+commerce_quickbooks_enterprise.quickbooks_qwc_form:
+  route_name: commerce_quickbooks_enterprise.quickbooks_qwc_form
+  base_route: commerce_quickbooks_enterprise.quickbooks_admin_form
+  title: 'QWC Generator'
+  weight: 20
