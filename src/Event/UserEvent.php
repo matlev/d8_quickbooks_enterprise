@@ -2,8 +2,8 @@
 
 namespace Drupal\commerce_quickbooks_enterprise\Event;
 
+use Drupal\user\UserInterface;
 use Symfony\Component\EventDispatcher\Event;
-use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Defines the User event.
@@ -15,24 +15,24 @@ class UserEvent extends Event {
   /**
    * The User.
    *
-   * @var \Drupal\Core\Entity\EntityInterface
+   * @var \Drupal\user\UserInterface
    */
   protected $user;
 
   /**
    * Constructs a new UserEvent
    *
-   * @param \Drupal\Core\Entity\EntityInterface $user
+   * @param \Drupal\user\UserInterface $user
    *   The User.
    */
-  public function __construct(EntityInterface $user) {
+  public function __construct(UserInterface $user) {
     $this->user = $user;
   }
 
   /**
    * Gets the User.
    *
-   * @return \Drupal\Core\Entity\EntityInterface
+   * @return \Drupal\user\UserInterface
    */
   public function getUser() {
     return $this->user;
