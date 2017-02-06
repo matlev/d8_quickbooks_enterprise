@@ -2,6 +2,11 @@
 
 namespace Drupal\commerce_quickbooks_enterprise\SoapBundle\Services;
 
+use Drupal\address\Plugin\Field\FieldType\AddressItem;
+use Drupal\commerce_order\Entity\Order;
+use Drupal\commerce_order\Entity\OrderInterface;
+use Drupal\commerce_payment\Entity\PaymentInterface;
+use Drupal\commerce_product\Entity\ProductVariationInterface;
 use Drupal\commerce_quickbooks_enterprise\Entity\QBItem;
 use Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -9,6 +14,7 @@ use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\user\Entity\User;
 use Drupal\user\UserAuthInterface;
+use Drupal\user\UserInterface;
 
 /**
  * Handle SOAP requests and return a response.
@@ -49,7 +55,7 @@ class SoapService implements SoapServiceInterface {
   /**
    * Entity Query service.
    *
-   * @var \Drupal\Core\Entity\Query\QueryInterface
+   * @var \Drupal\Core\Entity\Query\QueryFactory
    */
   private $entityQuery;
 
@@ -161,6 +167,7 @@ class SoapService implements SoapServiceInterface {
 
       // If the client has a valid ticket and request, log in now.
       if ($valid) {
+        /** @var UserInterface $user */
         $user = User::load($this->sessionManager->getUID());
         user_login_finalize($user);
 
@@ -295,11 +302,12 @@ class SoapService implements SoapServiceInterface {
     \Drupal::logger('commerce_qbe')->info("Request received, searching for exports in the Queue...");
 
     $not_ready = TRUE;
-    $item_type = '';
 
     // Go through the queue looking for a valid item.
     do {
       $qb_item_id = $this->qbItemStorage->loadNextPriorityItem($this->itemPriorities);
+
+      /** @var QBItemInterface $qb_item */
       $qb_item = QBItem::load($qb_item_id);
 
       // Validate the item data now to ensure it's exportable.
@@ -383,6 +391,8 @@ class SoapService implements SoapServiceInterface {
     $retry = FALSE;
 
     $qb_item_id = $this->qbItemStorage->loadMostRecentExport();
+
+    /** @var QBItemInterface $qb_item */
     $qb_item = QBItem::load($qb_item_id);
 
     if (!empty($qb_item)) {
@@ -420,6 +430,11 @@ class SoapService implements SoapServiceInterface {
       if (!$retry) {
         $qb_item->setStatus($status);
         $qb_item->save();
+
+        // Attach the Quickbooks ID(s) to the original entity now
+        $response_id = $this->qbxmlParser->getResponseIds();
+        $update = "update_" . $qb_item->getItemType();
+        $this->$update($qb_item, $response_id);
       }
 
       $request->receiveResponseXMLResult = $this->getCompletionProgress();
@@ -454,6 +469,7 @@ class SoapService implements SoapServiceInterface {
   public function call_closeConnection(\stdClass $request) {
     $this->sessionManager->closeSession();
     $request->closeConnectionResult = 'OK';
+
     return $request;
   }
 
@@ -472,6 +488,8 @@ class SoapService implements SoapServiceInterface {
    */
   private function prepare_product_export(QBItemInterface $qb_item, \stdClass &$properties) {
     $config = \Drupal::config('commerce_quickbooks_enterprise.QuickbooksAdmin');
+
+    /** @var ProductVariationInterface $product */
     $product = $qb_item->getExportableEntity();
 
     $properties->product_id = $product->id();
@@ -492,12 +510,39 @@ class SoapService implements SoapServiceInterface {
    *   The current export.
    */
   private function prepare_customer_export(QBItemInterface $qb_item, \stdClass &$properties) {
-    $customer = $qb_item->getExportableEntity();
-    \Drupal::logger('commerce_qbe')->info(print_r($customer, TRUE));
+    /** @var OrderInterface $order */
+    $order = $qb_item->getExportableEntity();
+    /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $billingProfile */
+    $billingProfile = $order->getBillingProfile()->get('address')->first();
+
+    $billing = [
+      'first_name' => $billingProfile->getGivenName(),
+      'last_name' => $billingProfile->getFamilyName(),
+      'thoroughfare' => $billingProfile->getAddressLine1(),
+      'premise' => $billingProfile->getAddressLine2(),
+      'locality' => $billingProfile->getLocality(),
+      'administrative_area' => $billingProfile->getAdministrativeArea(),
+      'postal_code' => $billingProfile->getPostalCode(),
+      'country' => $billingProfile->getCountryCode(),
+      'name_line' => '',
+    ];
+
+    if ($this->moduleHandler->moduleExists('commerce_shipping')) {
+      // @TODO: Parse out shipping information here and add to $properties.
+    }
+
+    $properties->billing = $billing;
+    $properties->email = $order->getEmail();
+
+    // We leave it up to site maintainers to hook into the module and change
+    // the phone property themselves, because there is no default 'phone' field.
+    $properties->phone = '';
   }
 
   /**
    * Parse Order entities into a template-ready object.
+   *
+   * Variables are added to $properties in the order they appear in the twigs.
    *
    * @param \stdClass $properties
    *   The properties object for product templates.
@@ -505,6 +550,101 @@ class SoapService implements SoapServiceInterface {
    *   The current export.
    */
   private function prepare_order_export(QBItemInterface $qb_item, \stdClass &$properties) {
+    $config = \Drupal::config('commerce_quickbooks_enterprise.QuickbooksAdmin');
+
+    /** @var OrderInterface $order */
+    $order = $qb_item->getExportableEntity();
+    /** @var UserInterface $customer */
+    $customer = $order->getCustomer();
+    /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $billingProfile */
+    $billingProfile = $order->getBillingProfile()->get('address')->first();
+    $line_items = $order->getItems();
+
+    $properties->order_id = $config->get('quickbooks_invoice_number_prefix') . $order->id();
+
+    // In case this is a mod_invoice call, attempt to set QB ref IDs.
+    if ($order->hasField('commerce_qbe_qbid') && $order->hasField('commerce_qbe_edit_sequence')) {
+      if (!empty($order->commerce_qbe_qbid->value)) {
+        $properties->quickbooks_order_txnid = $order->commerce_qbe_qbid->value;
+      }
+
+      if (!empty($order->commerce_qbe_edit_sequence->value)) {
+        $properties->quickbooks_order_edit_sequence = $order->commerce_qbe_edit_sequence->value;
+      }
+    }
+
+    // Try to set User reference.  Ideally this is always set, but not mandatory.
+    if ($customer->hasField('commerce_qbe_qbid') && !empty($customer->commerce_qbe_qbid->value)) {
+      $properties->customer_quickbooks_listid = $customer->commerce_qbe_qbid->value;
+    }
+    else {
+      $properties->last_name = $billingProfile->getFamilyName();
+      $properties->first_name = $billingProfile->getGivenName();
+    }
+
+    $properties->date = $order->getChangedTime();
+    $properties->ref_number = '';
+
+    // Add billing address information.
+    $billing = [
+      'thoroughfare' => $billingProfile->getAddressLine1(),
+      'premise' => $billingProfile->getAddressLine2(),
+      'sub_premise' => '',
+      'locality' => $billingProfile->getLocality(),
+      'administrative_area' => $billingProfile->getAdministrativeArea(),
+      'postal_code' => $billingProfile->getPostalCode(),
+      'country' => $billingProfile->getCountryCode(),
+    ];
+    $properties->billing_address = $billing;
+
+    // Add shipping address and shipping detail information.
+    if ($this->moduleHandler->moduleExists('commerce_shipping')) {
+      // @TODO: Parse out shipping information here and add to $properties.
+    }
+
+    // If the order has payment details, we need to add them for sales receipts.
+    $paymentQuery = $this->entityQuery->get('commerce_payment');
+    $paymentId = $paymentQuery
+      ->condition('order_id', $order->id())
+      ->execute();
+
+    if (!empty($paymentId)) {
+      $paymentStorage = \Drupal::entityTypeManager()->getStorage('commerce_payment');
+      /** @var PaymentInterface $payment */
+      $payment = $paymentStorage->load(reset($paymentId));
+
+      $properties->payment_method = $payment->getType()->getLabel();
+    }
+
+    // @TODO: Implement tax type when supported.
+    // $properties->tax_type = '';
+
+    // Add products from the order.
+    if (!empty($line_items)) {
+      $properties->products = [];
+
+      foreach ($line_items as $item) {
+        $purchasable = $item->getPurchasedEntity();
+
+        // We can only export product variations entities
+        if ($purchasable instanceof ProductVariationInterface) {
+          // Try to attach the QB ref ID first, if it exists.
+          if ($purchasable->hasField('commerce_qbe_qbid') && !empty($purchasable->commerce_qbe_qbid->value)) {
+            $product = ['quickbooks_listid' => $purchasable->commerce_qbe_qbid->value];
+          }
+          else {
+            $product = ['sku' => $purchasable->getSku()];
+          }
+
+          // Price is always assumed to be in USD, and should be converted as required.
+          $product['price'] = $purchasable->getPrice()->getNumber();
+          $product['title'] = $item->getTitle();
+          $product['quantity'] = $item->getQuantity();
+
+          $properties->products[] = $product;
+        }
+      }
+    }
 
   }
 
@@ -517,7 +657,126 @@ class SoapService implements SoapServiceInterface {
    *   The current export.
    */
   private function prepare_payment_export(QBItemInterface $qb_item, \stdClass &$properties) {
+    /** @var PaymentInterface $payment */
+    $payment = $qb_item->getExportableEntity();
+    /** @var OrderInterface $order */
+    $order = $payment->getOrder();
+    /** @var UserInterface $customer */
+    $customer = $order->getCustomer();
+    /** @var AddressItem $billingProfile */
+    $billingProfile = $order->getBillingProfile()->get('address')->first();
 
+    // Check if the user exists in Quickbooks already or not.
+    if ($customer->hasField('commerce_qbe_qbid') && !empty($customer->commerce_qbe_qbid->value)) {
+      $properties->customer_quickbooks_listid = $customer->commerce_qbe_qbid->value;
+    }
+    else {
+      $properties->last_name = $billingProfile->getFamilyName();
+      $properties->first_name = $billingProfile->getGivenName();
+    }
+
+    $properties->date = $payment->getCapturedTime();
+    $properties->ref_number = '';
+    $properties->amount = $payment->label();
+    $properties->payment_method = $payment->getType()->getLabel();
+
+    // Check if we're applying a payment to an exported invoice.
+    if ($order->hasField('commerce_qbe_qbid') && !empty($order->commerce_qbe_qbid->value)) {
+      $properties->order_txnid = $order->commerce_qbe_qbid->value;
+      $properties->order_payment_amount = $payment->label();
+    }
+  }
+
+  /**
+   * Attach the Quickbooks ID to the entity
+   *
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   * @param array $response
+   */
+  private function update_add_inventory_product(QBItemInterface $qb_item, $response = array()) {
+    /** @var ProductVariationInterface $product */
+    $product = $qb_item->getExportableEntity();
+    $product->set('commerce_qbe_qbid', $response['qbid']);
+    $product->save();
+  }
+
+  /**
+   * Attach the Quickbooks ID to the entity
+   *
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   * @param array $response
+   */
+  private function update_add_non_inventory_product(QBItemInterface $qb_item, $response = array()) {
+    /** @var ProductVariationInterface $product */
+    $product = $qb_item->getExportableEntity();
+    $product->set('commerce_qbe_qbid', $response['qbid']);
+    $product->save();
+  }
+
+  /**
+   * Attach the Quickbooks ID to the entity
+   *
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   * @param array $response
+   */
+  private function update_add_customer(QBItemInterface $qb_item, $response = array()) {
+    /** @var OrderInterface $order */
+    $order = $qb_item->getExportableEntity();
+    $customer = $order->getCustomer();
+    $customer->set('commerce_qbe_qbid', $response['qbid']);
+    $customer->save();
+  }
+
+  /**
+   * Attach the Quickbooks ID to the entity
+   *
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   * @param array $response
+   */
+  private function update_add_invoice(QBItemInterface $qb_item, $response = array()) {
+    /** @var OrderInterface $order */
+    $order = $qb_item->getExportableEntity();
+    $order->set('commerce_qbe_qbid', $response['qbid']);
+    $order->set('commerce_qbe_edit_sequence', $response['edit_sequence']);
+    $order->save();
+  }
+
+  /**
+   * Attach the Quickbooks ID to the entity
+   *
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   * @param array $response
+   */
+  private function update_mod_invoice(QBItemInterface $qb_item, $response = array()) {
+    /** @var OrderInterface $order */
+    $order = $qb_item->getExportableEntity();
+    $order->set('commerce_qbe_edit_sequence', $response['edit_sequence']);
+    $order->save();
+  }
+
+  /**
+   * Attach the Quickbooks ID to the entity
+   *
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   * @param array $response
+   */
+  private function update_add_sales_receipt(QBItemInterface $qb_item, $response = array()) {
+    /** @var PaymentInterface $payment */
+    $payment = $qb_item->getExportableEntity();
+    $order = $payment->getOrder();
+    $order->set('commerce_qbe_qbid', $response['qbid']);
+    $order->set('commerce_qbe_edit_sequence', $response['edit_sequence']);
+    $order->save();
+  }
+
+  /**
+   * Attach the Quickbooks ID to the entity
+   *
+   * @param \Drupal\commerce_quickbooks_enterprise\Entity\QBItemInterface $qb_item
+   * @param array $response
+   */
+  private function update_add_payment(QBItemInterface $qb_item, $response = array()) {
+    // @TODO: Add QBID field to Payments.
   }
 
   /****************************************************

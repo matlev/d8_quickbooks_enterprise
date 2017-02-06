@@ -6,6 +6,7 @@
 
 namespace Drupal\commerce_quickbooks_enterprise\EventSubscriber;
 
+use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_product\Entity\ProductVariationInterface;
 use Drupal\commerce_quickbooks_enterprise\Entity\QBItem;
@@ -39,9 +40,6 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
       'commerce_payment.authorize_capture.post_transition' => 'onPaymentTransition',
       ProductEvents::PRODUCT_VARIATION_CREATE => 'onVariationAlter',
       ProductEvents::PRODUCT_VARIATION_UPDATE => 'onVariationAlter',
-      UserEvents::USER_CREATE => 'onUserEvent',
-      UserEvents::USER_INSERT => 'onUserEvent',
-      UserEvents::USER_UPDATE => 'onUserEvent',
     ];
 
     return $events;
@@ -64,8 +62,8 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     if (
       $order->hasField('commerce_qbe_qbid') &&
       $order->hasField('commerce_qbe_edit_sequence') &&
-      !empty($order->commerce_qbe_qbid) &&
-      !empty($order->commerce_qbe_edit_sequence)
+      !empty($order->commerce_qbe_qbid->value) &&
+      !empty($order->commerce_qbe_edit_sequence->value)
     ) {
       $export_type = "mod_invoice";
     }
@@ -80,8 +78,8 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
 
     // Orders require a bit of work because we have to determine what stage it's
     // coming from and where it's going before we can begin to export.
-    $from = $event->getFromState()->getLabel();
-    $to = $event->getToState()->getLabel();
+    $from = $event->getFromState()->getId();
+    $to = $event->getToState()->getId();
 
     // Do nothing if the order is canceled.
     if ($to == 'canceled') {
@@ -95,8 +93,7 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
 
     // We've passed all of our failing cases, now we can export the order and its components.
     // Export the customer, if needed.
-    $customer = $order->getCustomer();
-    $this->createCustomerExport($customer);
+    $this->createCustomerExport($order);
 
     // Export products, if needed.
     $items = $order->getItems();
@@ -110,8 +107,7 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     }
 
     // Finally, export the order itself.
-    \Drupal::logger('commerce_qbe_events')->info('Adding Invoice Order to export queue...');
-
+    /** @var \Drupal\commerce_quickbooks_enterprise\Entity\QBItem $qb_item */
     $qb_item = QBItem::create();
     $qb_item->setItemType($export_type);
     $qb_item->setStatus(CQBWC_PENDING);
@@ -126,6 +122,7 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
    * Process and adds a Payment to the export queue.
    *
    * Optionally attempts to add a Sales Receipt export.
+   * @TODO: Don't export payments if a sales receipt is exported.
    *
    * @param \Drupal\state_machine\Event\WorkflowTransitionEvent $event
    */
@@ -136,10 +133,22 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
 
     /** @var PaymentInterface $payment */
     $payment = $event->getEntity();
+    /** @var OrderInterface $order */
+    $order = $payment->getOrder();
+
+    if (!empty($exportable['add_sales_receipt'])) {
+      /** @var \Drupal\commerce_quickbooks_enterprise\Entity\QBItem $qb_item */
+      $qb_item = QBItem::create();
+      $qb_item->setItemType('add_sales_receipt');
+      $qb_item->setStatus(CQBWC_PENDING);
+      $qb_item->setExportableEntity($order);
+      $qb_item->setCreatedTime(REQUEST_TIME);
+      $qb_item->save();
+
+      \Drupal::logger('commerce_qbe_events')->info('Added Sales Receipt to export queue!');
+    }
 
     if (!empty($exportable['add_payment'])) {
-      \Drupal::logger('commerce_qbe_events')->info('Adding Payment to export queue...');
-
       $qb_item = QBItem::create();
       $qb_item->setItemType('add_payment');
       $qb_item->setStatus(CQBWC_PENDING);
@@ -148,19 +157,6 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
       $qb_item->save();
 
       \Drupal::logger('commerce_qbe_events')->info('Added Payment to export queue!');
-    }
-
-    if (!empty($exportable['add_sales_receipt'])) {
-      \Drupal::logger('commerce_qbe_events')->info('Adding Sales Receipt to export queue...');
-
-      $qb_item = QBItem::create();
-      $qb_item->setItemType('add_sales_receipt');
-      $qb_item->setStatus(CQBWC_PENDING);
-      $qb_item->setExportableEntity($payment);
-      $qb_item->setCreatedTime(REQUEST_TIME);
-      $qb_item->save();
-
-      \Drupal::logger('commerce_qbe_events')->info('Added Sales Receipt to export queue!');
     }
   }
 
@@ -173,21 +169,6 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     /** @var \Drupal\commerce_product\Entity\ProductVariationInterface $variation */
     $variation = $event->getProductVariation();
     $this->createProductExport($variation);
-  }
-
-  /**
-   * Pass a User entity to the Queue
-   *
-   * A report sent to Quickbooks must have a customer reference.  Drupal Users
-   * are matched to a Quickbooks customer, or a Quickbooks customer is created
-   * from a Drupal User.  A Quickbooks customer ref. ID is stored with the User.
-   *
-   * @param \Drupal\commerce_quickbooks_enterprise\Event\UserEvent $event
-   */
-  public function onUserEvent(UserEvent $event) {
-    /** @var \Drupal\user\UserInterface $user */
-    $user = $event->getUser();
-    $this->createCustomerExport($user);
   }
 
   /**
@@ -208,11 +189,23 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
       return;
     }
 
-    // Only add products that don't currently have a Quickbooks reference ID
+    // Only add products that don't currently have a Quickbooks reference ID,
+    // and are not currently queued up for export.
     if ($variation->hasField('commerce_qbe_qbid')) {
-      if (empty($variation->commerce_qbe_qbid->value)) {
-        \Drupal::logger('commerce_qbe_events')->info('Adding Product Variation to export queue...');
+      $continue = TRUE;
 
+      if (empty($variation->commerce_qbe_qbid->value)) {
+        $continue &= TRUE;
+      }
+
+      if ($continue) {
+        /** @var \Drupal\commerce_quickbooks_enterprise\QuickbooksItemEntityStorageInterface $qbItemStorage */
+        $qbItemStorage = \Drupal::getContainer()->get('entity_type.manager')->getStorage('commerce_qbe_qbitem');
+        $continue &= !$qbItemStorage->exportExists($variation);;
+      }
+
+      if ($continue) {
+        /** @var \Drupal\commerce_quickbooks_enterprise\Entity\QBItem $qb_item */
         $qb_item = QBItem::create();
         $qb_item->setItemType("add_inventory_product");
         $qb_item->setStatus(CQBWC_PENDING);
@@ -228,9 +221,13 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
   /**
    * Helper function to create a user QB Item export.
    *
-   * @param \Drupal\user\UserInterface $user
+   * We pass in the whole order and store it because we need to access the
+   * billing and shipping information from the user, as well as First and Last
+   * name in order to create a proper Customer for Quickbooks.
+   *
+   * @param \Drupal\commerce_order\Entity\OrderInterface $order
    */
-  private function createCustomerExport(UserInterface $user) {
+  private function createCustomerExport(OrderInterface $order) {
     $config = \Drupal::config('commerce_quickbooks_enterprise.QuickbooksAdmin');
     $exportable = $config->get('exportables');
 
@@ -239,17 +236,33 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
       return;
     }
 
+    // Pull out the customer to test if it's been exported before.
+    $user = $order->getCustomer();
+
     // Only add customers that don't currently have a Quickbooks reference ID
     if ($user->hasField('commerce_qbe_qbid')) {
-      if (empty($user->commerce_qbe_qbid)) {
-        \Drupal::logger('commerce_qbe_events')->info('Adding Customer to export queue...');
+      $continue = TRUE;
 
+      if (empty($user->commerce_qbe_qbid->value)) {
+        $continue &= TRUE;
+      }
+
+      if ($continue) {
+        /** @var \Drupal\commerce_quickbooks_enterprise\QuickbooksItemEntityStorageInterface $qbItemStorage */
+        $qbItemStorage = \Drupal::getContainer()->get('entity_type.manager')->getStorage('commerce_qbe_qbitem');
+        $continue &= !$qbItemStorage->exportExists($order, 'add_customer');
+      }
+
+      if ($continue) {
+        /** @var \Drupal\commerce_quickbooks_enterprise\Entity\QBItem $qb_item */
         $qb_item = QBItem::create();
         $qb_item->setItemType("add_customer");
         $qb_item->setStatus(CQBWC_PENDING);
-        $qb_item->setExportableEntity($user);
+        $qb_item->setExportableEntity($order);
         $qb_item->setCreatedTime(REQUEST_TIME);
         $qb_item->save();
+
+        \Drupal::logger('commerce_qbe_events')->info('Added Product Variation to export queue!');
       }
     }
   }
