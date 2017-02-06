@@ -6,7 +6,7 @@
             <ReceivePaymentAdd>
                 <CustomerRef>
                     {% if properties.customer_quickbooks_listid is not empty %}
-                    <ListID>{{ print customer_quickbooks_listid }}</ListID>
+                    <ListID>{{ properties.customer_quickbooks_listid }}</ListID>
                     {% else %}
                     <FullName>{{ properties.last_name}}, {{ properties.first_name }}</FullName>
                     {% endif %}

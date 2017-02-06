@@ -71,9 +71,8 @@ class QBXMLParser {
       return $this->simpleXMLObject;
     }
 
-    $xml = $xml || $this->requestXML;
+    $xml = empty($xml) ? $this->requestXML : $xml;
     $parsed = new \SimpleXMLElement($xml);
-
     $this->simpleXMLObject = $parsed;
 
     return $parsed;
@@ -99,12 +98,13 @@ class QBXMLParser {
     // Retrieve the valid types of QB Items we're allowed to export
     $bundle_fields = \Drupal::getContainer()
       ->get('entity_field.manager')
-      ->getFieldDefinitions("commerce_quickbooks_enterprise_qbitem");
+      ->getFieldDefinitions("commerce_qbe_qbitem", "default");
     $field_definition = $bundle_fields['item_type'];
     $valid_types = $field_definition->getSetting('allowed_values');
 
     // Return an empty response if the $type isn't valid
-    if (!in_array($type, $valid_types)) {
+    if (!array_key_exists($type, $valid_types)) {
+      \Drupal::logger('commerce_qbe_qbxml')->error("Invalid type.  $type tried, " . print_r($valid_types, TRUE). ' allowed.');
       $this->responseXML = null;
       return $this;
     }

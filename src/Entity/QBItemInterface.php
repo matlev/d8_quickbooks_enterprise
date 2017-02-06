@@ -86,14 +86,10 @@ interface QBItemInterface extends ContentEntityInterface {
   /**
    * Retrieve the export time.
    *
-   * @param string $format
-   *   The desired format to convert the ISO-8601 format to, if desired. Must
-   *   be a string recognized by the date() function (ex. 'Y m d').
-   *
    * @return string
    *   The text representation of the date.
    */
-  public function getExportTime($format);
+  public function getExportTime();
 
   /**
    * Set the Export time of the QB Item.
