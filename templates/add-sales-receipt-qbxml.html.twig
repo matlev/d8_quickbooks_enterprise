@@ -43,7 +43,7 @@
                     <FullName>{{ properties.tax_type }}</FullName>
                 </ItemSalesTaxRef>
                 {% endif %}
-                {{ if properties.products is defined }}
+                {% if properties.products is defined %}
                     {% for product in properties.products %}
                     <SalesReceiptLineAdd>
                         <ItemRef>

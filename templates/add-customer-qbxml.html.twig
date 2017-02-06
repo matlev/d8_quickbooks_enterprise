@@ -20,7 +20,7 @@
                     <PostalCode>{{ properties.billing.postal_code }}</PostalCode>
                     <Country>{{ properties.billing.country }}</Country>
                 </BillAddress>
-                {{ if properties.shipping is defined }}
+                {% if properties.shipping is defined %}
                 <ShipAddress>
                     <Addr1>{{ properties.shipping.thoroughfare }}</Addr1>
                     <Addr2>{{ properties.shipping.premise }}</Addr2>

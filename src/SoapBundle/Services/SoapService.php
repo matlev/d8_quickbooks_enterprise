@@ -368,14 +368,15 @@ class SoapService implements SoapServiceInterface {
 
     // If we failed, mark the current Item as a failure and try the next Item.
     if (empty($qbxml)) {
+      \Drupal::logger('commerce_qbe_request')->error('Failed to generate xml.');
       $qb_item->setStatus($this->status['CQBWC_ERROR']);
-      $qb_item->setExportTime(date("c"));
+      $qb_item->setExportTime(REQUEST_TIME);
       $qb_item->save();
 
       return $this->call_sendRequestXML($request);
     }
     else {
-      $qb_item->setExportTime(date("c"));
+      $qb_item->setExportTime(REQUEST_TIME);
       $qb_item->save();
 
       $request->sendRequestXMLResult = $qbxml;
@@ -398,8 +399,9 @@ class SoapService implements SoapServiceInterface {
     if (!empty($qb_item)) {
       // Parse any errors if we have them to decide our next action.
       if (!empty($request->response)) {
-        $this->qbxmlParser->setRequestXML($request->response);
-        $this->qbxmlParser->parseQuickbooksErrors();
+        $this->qbxmlParser
+          ->setRequestXML($request->response)
+          ->parseQuickbooksErrors();
         $errors = $this->qbxmlParser->getErrorList();
       }
       else {
@@ -410,9 +412,9 @@ class SoapService implements SoapServiceInterface {
       }
 
       foreach ($errors as $error) {
-        $error_msg = t("Response error statusCode:\nstatusMessage\n", $error);
+        $error_msg = "Response error statusCode: " . print_r($error, TRUE);
 
-        \Drupal::logger('commerce_qbe_errors')->error(nl2br($error_msg));
+        \Drupal::logger('commerce_qbe_errors')->error($error_msg);
 
         // Ignore statusCode 3100 (already exists).
         if ($error['statusCode'] == "3100") {
@@ -431,10 +433,12 @@ class SoapService implements SoapServiceInterface {
         $qb_item->setStatus($status);
         $qb_item->save();
 
-        // Attach the Quickbooks ID(s) to the original entity now
-        $response_id = $this->qbxmlParser->getResponseIds();
-        $update = "update_" . $qb_item->getItemType();
-        $this->$update($qb_item, $response_id);
+        if ($status == $this->status['CQBWC_DONE']) {
+          // Attach the Quickbooks ID(s) to the original entity now
+          $response_id = $this->qbxmlParser->getResponseIds();
+          $update = "update_" . $qb_item->getItemType();
+          $this->$update($qb_item, $response_id);
+        }
       }
 
       $request->receiveResponseXMLResult = $this->getCompletionProgress();
@@ -495,10 +499,10 @@ class SoapService implements SoapServiceInterface {
     $properties->product_id = $product->id();
     $properties->sku = $product->getSku();
     $properties->title = $product->getTitle();
-    $properties->price = $product->getPrice();
-    $properties->income = $config->get('income');
-    $properties->cogs = $config->get('cogs');
-    $properties->assets = $config->get('assets');
+    $properties->price = number_format($product->getPrice()->getNumber(), 2, '.', '');
+    $properties->income = $config->get('main_income_account');
+    $properties->cogs = $config->get('cogs_account');
+    $properties->assets = $config->get('assets_account');
   }
 
   /**
@@ -582,7 +586,7 @@ class SoapService implements SoapServiceInterface {
       $properties->first_name = $billingProfile->getGivenName();
     }
 
-    $properties->date = $order->getChangedTime();
+    $properties->date = date("Y-m-d", $order->getChangedTime());
     $properties->ref_number = '';
 
     // Add billing address information.
@@ -637,7 +641,7 @@ class SoapService implements SoapServiceInterface {
           }
 
           // Price is always assumed to be in USD, and should be converted as required.
-          $product['price'] = $purchasable->getPrice()->getNumber();
+          $product['price'] = number_format($purchasable->getPrice()->getNumber(), 2, '.', '');
           $product['title'] = $item->getTitle();
           $product['quantity'] = $item->getQuantity();
 
@@ -675,15 +679,18 @@ class SoapService implements SoapServiceInterface {
       $properties->first_name = $billingProfile->getGivenName();
     }
 
-    $properties->date = $payment->getCapturedTime();
+    $properties->date = date("Y-m-d", $payment->getCapturedTime());
     $properties->ref_number = '';
-    $properties->amount = $payment->label();
-    $properties->payment_method = $payment->getType()->getLabel();
+    $properties->amount = number_format($payment->getAmount()->getNumber(), 2, '.', '');
+    $properties->payment_method = $payment
+      ->getPaymentGateway()
+      ->getPlugin()
+      ->getDisplayLabel();
 
     // Check if we're applying a payment to an exported invoice.
     if ($order->hasField('commerce_qbe_qbid') && !empty($order->commerce_qbe_qbid->value)) {
       $properties->order_txnid = $order->commerce_qbe_qbid->value;
-      $properties->order_payment_amount = $payment->label();
+      $properties->order_payment_amount = number_format($payment->getAmount()->getNumber(), 2, '.', '');
     }
   }
 

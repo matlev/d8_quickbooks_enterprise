@@ -117,18 +117,15 @@ class QBItem extends ContentEntityBase implements QBItemInterface {
   /**
    * {@inheritdoc}
    */
-  public function getExportTime($format = \DateTime::ISO8601) {
-    $time = $this->get('exported')->value;
-    $dateTime = \DateTime::createFromFormat(\DateTime::ISO8601, $time);
-
-    return $dateTime->format($format);
+  public function getExportTime() {
+    return $this->get('exported')->value;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function setExportTime($iso_string) {
-    $this->set('created', $iso_string);
+  public function setExportTime($timestamp) {
+    $this->set('exported', $timestamp);
     return $this;
   }
 
@@ -170,7 +167,7 @@ class QBItem extends ContentEntityBase implements QBItemInterface {
       ->setLabel(t('Created'))
       ->setDescription(t('The time that the entity was created.'));
 
-    $fields['exported'] = BaseFieldDefinition::create('datetime')
+    $fields['exported'] = BaseFieldDefinition::create('timestamp')
       ->setLabel(t('Exported timestamp'))
       ->setDescription(t('The time that the Item was exported.'));
 
