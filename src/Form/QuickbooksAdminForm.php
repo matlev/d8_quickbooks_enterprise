@@ -51,7 +51,15 @@ class QuickbooksAdminForm extends ConfigFormBase {
       '#type' => 'checkboxes',
       '#title' => $this->t('Exportables'),
       '#description' => $this->t('Specify which kinds of exportables you want to enable.'),
-      '#options' => array('add_customer' => $this->t('Customers'), 'add_inventory_product' => $this->t('Inventory products'), 'add_non_inventory_product' => $this->t('Non-inventory products'), 'add_invoice' => $this->t('Invoices'), 'mod_invoice' => $this->t('Modified invoices'), 'add_sales_receipt' => $this->t('Sales receipts'), 'add_payment' => $this->t('Payments')),
+      '#options' => array(
+        'add_customer' => $this->t('Customers'),
+        'add_inventory_product' => $this->t('Inventory products'),
+        'add_non_inventory_product' => $this->t('Non-inventory products'),
+        'add_invoice' => $this->t('Invoices'),
+        'mod_invoice' => $this->t('Modified invoices'),
+        'add_sales_receipt' => $this->t('Sales receipts'),
+        'add_payment' => $this->t('Payments')
+      ),
       '#default_value' => $config->get('exportables'),
     ];
     $form['export_settings']['retry_exports'] = [
@@ -144,7 +152,11 @@ class QuickbooksAdminForm extends ConfigFormBase {
       '#type' => 'checkboxes',
       '#title' => $this->t('Log file settings'),
       '#description' => $this->t('Write QB Webconnect update details to log file.'),
-      '#options' => array('internal_logging' => $this->t('Enable Drupal message logging'), 'external_logging' => $this->t('Enable external logging'), 'truncate_log' => $this->t('Truncate log before update')),
+      '#options' => array(
+        'internal_logging' => $this->t('Enable Drupal message logging'),
+        'external_logging' => $this->t('Enable external logging'),
+        'truncate_log' => $this->t('Truncate log before update')
+      ),
       '#default_value' => $config->get('log_file_settings'),
     ];
     $form['logging']['path_to_log_file'] = [

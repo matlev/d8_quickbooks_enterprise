@@ -67,6 +67,10 @@ class QBXMLParser {
    *   Returns a SimpleXMLElement object
    */
   public function getSimpleXMLObject($xml = null) {
+    if ($xml == null && !empty($this->simpleXMLObject)) {
+      return $this->simpleXMLObject;
+    }
+
     $xml = $xml || $this->requestXML;
     $parsed = new \SimpleXMLElement($xml);
 
@@ -152,6 +156,71 @@ class QBXMLParser {
 
       $this->errors = $errors;
     }
+  }
+
+
+  public function getResponseIDs() {
+    $response = [];
+
+    if (empty($this->requestXML)) {
+      return $response;
+    }
+
+    // Parse the xml if it hasn't been done so already.
+    if (empty($this->simpleXMLObject)) {
+      $this->getSimpleXMLObject();
+    }
+
+    foreach ($this->simpleXMLObject->QBXMLMsgsRs->children() as $child_node) {
+      $node_attributes = $child_node->attributes();
+      if (isset($node_attributes['statusSeverity']) && (string) $node_attributes['statusSeverity'] == 'Error') {
+        // Error, xml is not as expected so don't continue response. Probably due to duplicate data error (ie. 3100)
+        continue;
+      }
+
+      // Return the ID from the given response
+      switch (strtolower($child_node->getName())) {
+        case 'salesreceiptaddrs':
+          $response['qbid'] = $child_node->SalesReceiptRet->TxnID;
+          $response['edit_sequence'] = $child_node->SalesReceiptRet->EditSequence;
+          break;
+
+        case 'invoiceaddrs':
+          $response['qbid'] = $child_node->InvoiceRet->TxnID;
+          $response['edit_sequence'] = $child_node->InvoiceRet->EditSequence;
+          break;
+
+        case 'invoicemodrs':
+          $response['qbid'] = $child_node->InvoiceRet->EditSequence;
+          break;
+
+        case 'receivepaymentaddrs':
+          $response['qbid'] = $child_node->ReceivePaymentRet->TxnID;
+          break;
+
+        case 'itemnoninventoryaddrs':
+          $response['qbid'] = $child_node->ItemNonInventoryRet->ListID;
+          break;
+
+        case 'iteminventoryaddrs':
+          $response['qbid'] = $child_node->ItemInventoryRet->ListID;
+          break;
+
+        case 'customeraddrs':
+          $response['qbid'] = $child_node->CustomerRet->ListID;
+          break;
+
+        default:
+          break;
+      }
+
+      // If we have our IDs, break out and return them.
+      if (!empty($response)) {
+        break;
+      }
+    }
+
+    return $response;
   }
 
   /**

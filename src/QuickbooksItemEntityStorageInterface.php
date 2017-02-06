@@ -3,8 +3,21 @@
 namespace Drupal\commerce_quickbooks_enterprise;
 
 use Drupal\Core\Entity\ContentEntityStorageInterface;
+use Drupal\Core\Entity\EntityInterface;
 
 interface QuickbooksItemEntityStorageInterface extends ContentEntityStorageInterface {
+
+  /**
+   * Check if the given entity is already queued for export.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to check for existence.
+   * @param null $export_type
+   *   An optional string to clarify what export type may store the entity.
+   *
+   * @return mixed
+   */
+  public function exportExists(EntityInterface $entity, $export_type = NULL);
 
   /**
    * Load the next exportable Item according to a given priority.

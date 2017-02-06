@@ -3,9 +3,32 @@
 namespace Drupal\commerce_quickbooks_enterprise;
 
 use Drupal\commerce_quickbooks_enterprise;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\Sql\SqlContentEntityStorage;
 
 class QuickbooksItemEntityStorage extends SqlContentEntityStorage implements QuickbooksItemEntityStorageInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function exportExists(EntityInterface $entity, $export_type = NULL) {
+    $id = $entity->id();
+    $type = $entity->getEntityType()->id();
+
+    $query = $this->getQuery();
+    $query
+      ->count()
+      ->condition('exportable_entity__target_id', $id)
+      ->condition('exportable_entity__target_type', $type);
+
+    if (!empty($export_type)) {
+      $query->condition('item_type', $export_type);
+    }
+
+    $result = $query->execute();
+
+    return (bool) $result;
+  }
 
   /**
    * {@inheritdoc}
