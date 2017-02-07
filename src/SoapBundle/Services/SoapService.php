@@ -258,6 +258,8 @@ class SoapService implements SoapServiceInterface {
 
   /**
    * {@inheritDoc}
+   *
+   * @TODO: Reset failed exports id requested.
    */
   public function call_authenticate(\stdClass $request) {
     $strUserName = $request->strUserName;

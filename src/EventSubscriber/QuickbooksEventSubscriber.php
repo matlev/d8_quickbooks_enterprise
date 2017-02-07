@@ -194,8 +194,8 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     if ($variation->hasField('commerce_qbe_qbid')) {
       $continue = TRUE;
 
-      if (empty($variation->commerce_qbe_qbid->value)) {
-        $continue &= TRUE;
+      if (!empty($variation->commerce_qbe_qbid->value)) {
+        $continue &= FALSE;
       }
 
       if ($continue) {
@@ -243,8 +243,8 @@ class QuickbooksEventSubscriber implements EventSubscriberInterface {
     if ($user->hasField('commerce_qbe_qbid')) {
       $continue = TRUE;
 
-      if (empty($user->commerce_qbe_qbid->value)) {
-        $continue &= TRUE;
+      if (!empty($user->commerce_qbe_qbid->value)) {
+        $continue &= FALSE;
       }
 
       if ($continue) {
